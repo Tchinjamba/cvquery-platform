@@ -8,7 +8,7 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/cv', require('./routes/cvRoutes'));
 app.use('/api/templates', require('./routes/templatesRoutes'));
-app.use('/api/tutorials', require('./routes/tutorialsRoutes'));8
+app.use('/api/tutorials', require('./routes/tutorialsRoutes')); 8
 app.use('/api/export', require('./routes/exportRoutes'));
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 app.get("/api/health", (req, res) => {
@@ -16,10 +16,10 @@ app.get("/api/health", (req, res) => {
     ok: true,
     message: "Backend ativo"
   });
-});
+}); 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/cvquery';
-mongoose.connect(MONGO_URI)
+const MONGODB_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/cvquery';
+mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('MongoDB ligado');
     app.listen(PORT, () => console.log('Servidor na porta ' + PORT));

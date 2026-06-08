@@ -1,4 +1,4 @@
-const jwt  = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 function signToken(user) {
@@ -15,7 +15,7 @@ async function register(req, res) {
   try {
     const exists = await User.findOne({ email });
     if (exists) return res.status(409).json({ error: 'Email ja registado.' });
-    const user  = await User.create({ email, password });
+    const user = await User.create({ email, password });
     return res.status(201).json({ token: signToken(user) });
   } catch (err) { return res.status(500).json({ error: err.message }); }
 }

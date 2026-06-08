@@ -1,99 +1,151 @@
 const Template = require('../models/Template');
 
+// Criar um novo template
 async function createTemplate(req, res) {
-    const { name, format, content, description } = req.body;
+  try {
+    const { name, body } = req.body;
 
-    if (!name || !content) {
-        return res.status(400).json({ error: 'name e content sao obrigatorios.' });
+    if (!name || !body) {
+      return res.status(400).json({
+        error: 'Nome e conteudo do template sao obrigatorios.'
+      });
     }
 
-    try {
-        const template = await Template.create({
-            owner: req.user.id,
-            name,
-            format,
-            content,
-            description
-        });
+    const template = new Template({
+      name,
+      content: body,
+      owner: req.user.id
+    });
 
-        return res.status(201).json(template);
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+    await template.save();
+
+    return res.status(201).json({
+      _id: template._id,
+      name: template.name,
+      content: template.content,
+      createdAt: template.createdAt
+    });
+
+  } catch (err) {
+    console.error('Erro ao criar template:', err);
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 }
 
+// Listar todos os templates do utilizador
 async function listTemplates(req, res) {
-    try {
-        const templates = await Template.find({ owner: req.user.id }).sort({ createdAt: -1 }).lean();
-        return res.json(templates);
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+  try {
+    const templates = await Template.find({
+      owner: req.user.id
+    }).sort({ createdAt: -1 }).lean();
+
+    return res.json(templates);
+
+  } catch (err) {
+    console.error('Erro ao listar templates:', err);
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 }
 
+// Obter um template específico
 async function getTemplate(req, res) {
-    try {
-        const template = await Template.findOne({
-            _id: req.params.id,
-            owner: req.user.id
-        }).lean();
+  try {
+    const { id } = req.params;
 
-        if (!template) {
-            return res.status(404).json({ error: 'Template nao encontrado.' });
-        }
+    const template = await Template.findOne({
+      _id: id,
+      owner: req.user.id
+    }).lean();
 
-        return res.json(template);
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+    if (!template) {
+      return res.status(404).json({
+        error: 'Template nao encontrado.'
+      });
     }
+
+    return res.json(template);
+
+  } catch (err) {
+    console.error('Erro ao obter template:', err);
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 }
 
+// Atualizar um template
 async function updateTemplate(req, res) {
-    const { name, format, content, description } = req.body;
+  try {
+    const { id } = req.params;
+    const { name, body } = req.body;
 
-    try {
-        const template = await Template.findOneAndUpdate(
-            { _id: req.params.id, owner: req.user.id },
-            {
-                ...(name && { name }),
-                ...(format && { format }),
-                ...(content && { content }),
-                ...(description && { description })
-            },
-            { new: true, runValidators: true }
-        ).lean();
+    const template = await Template.findOne({
+      _id: id,
+      owner: req.user.id
+    });
 
-        if (!template) {
-            return res.status(404).json({ error: 'Template nao encontrado.' });
-        }
-
-        return res.json(template);
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+    if (!template) {
+      return res.status(404).json({
+        error: 'Template nao encontrado.'
+      });
     }
+
+    if (name) template.name = name;
+    if (body) template.content = body;
+
+    await template.save();
+
+    return res.json({
+      _id: template._id,
+      name: template.name,
+      content: template.content,
+      updatedAt: template.updatedAt
+    });
+
+  } catch (err) {
+    console.error('Erro ao atualizar template:', err);
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 }
 
+// Eliminar um template
 async function deleteTemplate(req, res) {
-    try {
-        const template = await Template.findOneAndDelete({
-            _id: req.params.id,
-            owner: req.user.id
-        }).lean();
+  try {
+    const { id } = req.params;
 
-        if (!template) {
-            return res.status(404).json({ error: 'Template nao encontrado.' });
-        }
+    const template = await Template.findOneAndDelete({
+      _id: id,
+      owner: req.user.id
+    });
 
-        return res.json({ message: 'Template removido com sucesso.', id: req.params.id });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+    if (!template) {
+      return res.status(404).json({
+        error: 'Template nao encontrado.'
+      });
     }
+
+    return res.json({
+      message: 'Template eliminado com sucesso.'
+    });
+
+  } catch (err) {
+    console.error('Erro ao eliminar template:', err);
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 }
 
 module.exports = {
-    createTemplate,
-    listTemplates,
-    getTemplate,
-    updateTemplate,
-    deleteTemplate
+  createTemplate,
+  listTemplates,
+  getTemplate,
+  updateTemplate,
+  deleteTemplate
 };

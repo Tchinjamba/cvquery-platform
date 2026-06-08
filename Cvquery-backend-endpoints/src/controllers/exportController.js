@@ -3,18 +3,17 @@ const CV = require('../models/CV');
 const Template = require('../models/Template');
 const { processCV } = require('../services/cvqueryProcessor');
 
-// Exportar para PDF (já existente)
+// Exportar para PDF
 async function exportPDF(req, res) {
   try {
-    const { cvId, templateId } = req.body;
+    const { cvId, templateId, content } = req.body;
 
-    if (!cvId || !templateId) {
+    if (!cvId) {
       return res.status(400).json({
-        error: 'cvId e templateId sao obrigatorios.'
+        error: 'cvId é obrigatorio.'
       });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
@@ -26,61 +25,42 @@ async function exportPDF(req, res) {
       });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
-
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `Nome: $.name\nEmail: $.contact.email`;
     }
 
-    // Gerar HTML
-    const html = processCV(
-      cv.data,
-      template.content,
-      'html'
-    );
+    const html = processCV(cv.data, templateContent, 'html');
 
-    // Abrir browser
     const browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
-
-    await page.setContent(html, {
-      waitUntil: 'networkidle0'
-    });
-
-    // Gerar PDF
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
-    });
-
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true });
     await browser.close();
-
-    const pdfBuffer = Buffer.from(pdf);
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': 'attachment; filename="cv.pdf"',
-      'Content-Length': pdfBuffer.length
+      'Content-Disposition': 'attachment; filename="cv.pdf"'
     });
 
-    return res.send(pdfBuffer);
+    return res.send(pdf);
 
   } catch (err) {
     console.error('Erro ao gerar PDF:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -90,21 +70,16 @@ async function exportJSON(req, res) {
     const { cvId } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({
-        error: 'cvId é obrigatorio.'
-      });
+      return res.status(400).json({ error: 'cvId é obrigatorio.' });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
     const jsonData = JSON.stringify(cv.data, null, 2);
@@ -118,53 +93,56 @@ async function exportJSON(req, res) {
 
   } catch (err) {
     console.error('Erro ao gerar JSON:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
 // Exportar para HTML
 async function exportHTML(req, res) {
   try {
-    const { cvId, templateId } = req.body;
+    const { cvId, templateId, content } = req.body;
 
-    if (!cvId || !templateId) {
-      return res.status(400).json({
-        error: 'cvId e templateId sao obrigatorios.'
-      });
+    if (!cvId) {
+      return res.status(400).json({ error: 'cvId é obrigatorio.' });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
-
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>${cv.data?.name || 'CV'}</title></head>
+<body>
+  <h1>${cv.data?.name || 'Nome não definido'}</h1>
+  <p>Email: ${cv.data?.contact?.email || ''}</p>
+</body>
+</html>`;
     }
 
-    // Gerar HTML usando o processCV
-    const html = processCV(
-      cv.data,
-      template.content,
-      'html'
-    );
+    let html;
+    try {
+      html = processCV(cv.data, templateContent, 'html');
+    } catch (err) {
+      console.error('Erro no processCV:', err);
+      html = templateContent;
+    }
 
     res.set({
       'Content-Type': 'text/html',
@@ -175,53 +153,49 @@ async function exportHTML(req, res) {
 
   } catch (err) {
     console.error('Erro ao gerar HTML:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
 // Exportar para LaTeX
 async function exportLaTeX(req, res) {
   try {
-    const { cvId, templateId } = req.body;
+    const { cvId, templateId, content } = req.body;
 
-    if (!cvId || !templateId) {
-      return res.status(400).json({
-        error: 'cvId e templateId sao obrigatorios.'
-      });
+    if (!cvId) {
+      return res.status(400).json({ error: 'cvId é obrigatorio.' });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
-
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `Nome: ${cv.data?.name || ''}\nEmail: ${cv.data?.contact?.email || ''}`;
     }
 
-    // Gerar LaTeX usando o processCV
-    const latex = processCV(
-      cv.data,
-      template.content,
-      'latex'
-    );
+    let latex;
+    try {
+      latex = processCV(cv.data, templateContent, 'latex');
+    } catch (err) {
+      console.error('Erro no processCV:', err);
+      latex = templateContent;
+    }
 
     res.set({
       'Content-Type': 'text/plain',
@@ -232,53 +206,49 @@ async function exportLaTeX(req, res) {
 
   } catch (err) {
     console.error('Erro ao gerar LaTeX:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
 // Exportar para Markdown
 async function exportMarkdown(req, res) {
   try {
-    const { cvId, templateId } = req.body;
+    const { cvId, templateId, content } = req.body;
 
-    if (!cvId || !templateId) {
-      return res.status(400).json({
-        error: 'cvId e templateId sao obrigatorios.'
-      });
+    if (!cvId) {
+      return res.status(400).json({ error: 'cvId é obrigatorio.' });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
-
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `# ${cv.data?.name || 'CV'}\n\n**Email:** ${cv.data?.contact?.email || ''}`;
     }
 
-    // Gerar Markdown usando o processCV
-    const markdown = processCV(
-      cv.data,
-      template.content,
-      'markdown'
-    );
+    let markdown;
+    try {
+      markdown = processCV(cv.data, templateContent, 'markdown');
+    } catch (err) {
+      console.error('Erro no processCV:', err);
+      markdown = templateContent;
+    }
 
     res.set({
       'Content-Type': 'text/markdown',
@@ -289,53 +259,49 @@ async function exportMarkdown(req, res) {
 
   } catch (err) {
     console.error('Erro ao gerar Markdown:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
 // Exportar para Texto
 async function exportText(req, res) {
   try {
-    const { cvId, templateId } = req.body;
+    const { cvId, templateId, content } = req.body;
 
-    if (!cvId || !templateId) {
-      return res.status(400).json({
-        error: 'cvId e templateId sao obrigatorios.'
-      });
+    if (!cvId) {
+      return res.status(400).json({ error: 'cvId é obrigatorio.' });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
-
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `Nome: ${cv.data?.name || ''}\nEmail: ${cv.data?.contact?.email || ''}`;
     }
 
-    // Gerar Texto usando o processCV
-    const text = processCV(
-      cv.data,
-      template.content,
-      'text'
-    );
+    let text;
+    try {
+      text = processCV(cv.data, templateContent, 'text');
+    } catch (err) {
+      console.error('Erro no processCV:', err);
+      text = templateContent;
+    }
 
     res.set({
       'Content-Type': 'text/plain',
@@ -346,88 +312,155 @@ async function exportText(req, res) {
 
   } catch (err) {
     console.error('Erro ao gerar Texto:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
-// Exportar para múltiplos formatos (batch)
-async function exportBatch(req, res) {
+// Exportar com template personalizado (rota unificada)
+async function exportWithTemplate(req, res) {
   try {
-    const { cvId, templateId, formats } = req.body;
+    const { cvId, templateContent, format } = req.body;
 
-    if (!cvId || !templateId || !formats || !formats.length) {
+    if (!cvId || !templateContent || !format) {
       return res.status(400).json({
-        error: 'cvId, templateId e formats sao obrigatorios.'
+        error: 'cvId, templateContent e format sao obrigatorios.'
       });
     }
 
-    // Buscar CV
     const cv = await CV.findOne({
       _id: cvId,
       owner: req.user.id
     }).lean();
 
     if (!cv) {
-      return res.status(404).json({
-        error: 'CV nao encontrado.'
-      });
+      return res.status(404).json({ error: 'CV nao encontrado.' });
     }
 
-    // Buscar template
-    const template = await Template.findOne({
-      _id: templateId,
-      owner: req.user.id
-    }).lean();
+    let output;
+    let contentType;
+    let extension;
 
-    if (!template) {
-      return res.status(404).json({
-        error: 'Template nao encontrado.'
-      });
-    }
-
-    const results = {};
-
-    for (const format of formats) {
+    try {
       switch(format) {
+        case 'html':
+          output = processCV(cv.data, templateContent, 'html');
+          contentType = 'text/html';
+          extension = 'html';
+          break;
+        case 'latex':
+          output = processCV(cv.data, templateContent, 'latex');
+          contentType = 'text/plain';
+          extension = 'tex';
+          break;
+        case 'markdown':
+          output = processCV(cv.data, templateContent, 'markdown');
+          contentType = 'text/markdown';
+          extension = 'md';
+          break;
+        case 'json':
+          output = JSON.stringify(cv.data, null, 2);
+          contentType = 'application/json';
+          extension = 'json';
+          break;
         case 'pdf':
-          const html = processCV(cv.data, template.content, 'html');
+          const html = processCV(cv.data, templateContent, 'html');
           const browser = await puppeteer.launch({ headless: 'new' });
           const page = await browser.newPage();
           await page.setContent(html, { waitUntil: 'networkidle0' });
           const pdf = await page.pdf({ format: 'A4', printBackground: true });
           await browser.close();
-          results.pdf = pdf.toString('base64');
+          output = pdf;
+          contentType = 'application/pdf';
+          extension = 'pdf';
           break;
-        case 'html':
-          results.html = processCV(cv.data, template.content, 'html');
-          break;
-        case 'latex':
-          results.latex = processCV(cv.data, template.content, 'latex');
-          break;
-        case 'markdown':
-          results.markdown = processCV(cv.data, template.content, 'markdown');
-          break;
-        case 'text':
-          results.text = processCV(cv.data, template.content, 'text');
-          break;
-        case 'json':
-          results.json = JSON.stringify(cv.data, null, 2);
-          break;
+        default:
+          output = processCV(cv.data, templateContent, 'text');
+          contentType = 'text/plain';
+          extension = 'txt';
+      }
+    } catch (err) {
+      console.error('Erro no processCV:', err);
+      output = templateContent;
+      contentType = 'text/plain';
+      extension = 'txt';
+    }
+
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="cv.${extension}"`
+    });
+
+    return res.send(output);
+
+  } catch (err) {
+    console.error('Erro ao exportar com template:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Exportar batch
+async function exportBatch(req, res) {
+  try {
+    const { cvId, templateId, content, formats } = req.body;
+
+    if (!cvId || !formats || !formats.length) {
+      return res.status(400).json({ error: 'cvId e formats sao obrigatorios.' });
+    }
+
+    const cv = await CV.findOne({
+      _id: cvId,
+      owner: req.user.id
+    }).lean();
+
+    if (!cv) {
+      return res.status(404).json({ error: 'CV nao encontrado.' });
+    }
+
+    let templateContent;
+    
+    if (content) {
+      templateContent = content;
+    } else if (templateId) {
+      const template = await Template.findOne({
+        _id: templateId,
+        owner: req.user.id
+      }).lean();
+      templateContent = template?.content;
+    } else {
+      templateContent = `Nome: ${cv.data?.name || ''}\nEmail: ${cv.data?.contact?.email || ''}`;
+    }
+
+    const results = {};
+
+    for (const format of formats) {
+      try {
+        switch(format) {
+          case 'html':
+            results.html = processCV(cv.data, templateContent, 'html');
+            break;
+          case 'latex':
+            results.latex = processCV(cv.data, templateContent, 'latex');
+            break;
+          case 'markdown':
+            results.markdown = processCV(cv.data, templateContent, 'markdown');
+            break;
+          case 'text':
+            results.text = processCV(cv.data, templateContent, 'text');
+            break;
+          case 'json':
+            results.json = JSON.stringify(cv.data, null, 2);
+            break;
+        }
+      } catch (err) {
+        results[format] = { error: err.message };
       }
     }
 
-    return res.json({
-      success: true,
-      formats: results
-    });
+    return res.json({ success: true, formats: results });
 
   } catch (err) {
     console.error('Erro ao gerar batch:', err);
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -438,5 +471,6 @@ module.exports = {
   exportLaTeX,
   exportMarkdown,
   exportText,
+  exportWithTemplate,
   exportBatch
 };

@@ -1,7 +1,7 @@
-const puppeteer = require('puppeteer');
+﻿const puppeteer = require('puppeteer');
 const CV = require('../models/CV');
 const Template = require('../models/Template');
-const { processCV } = require('../services/cvqueryProcessor');
+const { processCV, processWithHandlebars, generateDocxBuffer } = require('../services/cvqueryProcessor');
 
 // Exportar para PDF
 async function exportPDF(req, res) {
@@ -10,7 +10,7 @@ async function exportPDF(req, res) {
 
     if (!cvId) {
       return res.status(400).json({
-        error: 'cvId é obrigatorio.'
+        error: 'cvId Ã© obrigatorio.'
       });
     }
 
@@ -26,7 +26,7 @@ async function exportPDF(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -70,7 +70,7 @@ async function exportJSON(req, res) {
     const { cvId } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({ error: 'cvId é obrigatorio.' });
+      return res.status(400).json({ error: 'cvId Ã© obrigatorio.' });
     }
 
     const cv = await CV.findOne({
@@ -103,7 +103,7 @@ async function exportHTML(req, res) {
     const { cvId, templateId, content } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({ error: 'cvId é obrigatorio.' });
+      return res.status(400).json({ error: 'cvId Ã© obrigatorio.' });
     }
 
     const cv = await CV.findOne({
@@ -116,7 +116,7 @@ async function exportHTML(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -130,7 +130,7 @@ async function exportHTML(req, res) {
 <html>
 <head><meta charset="UTF-8"><title>${cv.data?.name || 'CV'}</title></head>
 <body>
-  <h1>${cv.data?.name || 'Nome não definido'}</h1>
+  <h1>${cv.data?.name || 'Nome nÃ£o definido'}</h1>
   <p>Email: ${cv.data?.contact?.email || ''}</p>
 </body>
 </html>`;
@@ -163,7 +163,7 @@ async function exportLaTeX(req, res) {
     const { cvId, templateId, content } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({ error: 'cvId é obrigatorio.' });
+      return res.status(400).json({ error: 'cvId Ã© obrigatorio.' });
     }
 
     const cv = await CV.findOne({
@@ -176,7 +176,7 @@ async function exportLaTeX(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -216,7 +216,7 @@ async function exportMarkdown(req, res) {
     const { cvId, templateId, content } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({ error: 'cvId é obrigatorio.' });
+      return res.status(400).json({ error: 'cvId Ã© obrigatorio.' });
     }
 
     const cv = await CV.findOne({
@@ -229,7 +229,7 @@ async function exportMarkdown(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -269,7 +269,7 @@ async function exportText(req, res) {
     const { cvId, templateId, content } = req.body;
 
     if (!cvId) {
-      return res.status(400).json({ error: 'cvId é obrigatorio.' });
+      return res.status(400).json({ error: 'cvId Ã© obrigatorio.' });
     }
 
     const cv = await CV.findOne({
@@ -282,7 +282,7 @@ async function exportText(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -341,7 +341,7 @@ async function exportWithTemplate(req, res) {
     let extension;
 
     try {
-      switch(format) {
+      switch (format) {
         case 'html':
           output = processCV(cv.data, templateContent, 'html');
           contentType = 'text/html';
@@ -417,7 +417,7 @@ async function exportBatch(req, res) {
     }
 
     let templateContent;
-    
+
     if (content) {
       templateContent = content;
     } else if (templateId) {
@@ -434,7 +434,7 @@ async function exportBatch(req, res) {
 
     for (const format of formats) {
       try {
-        switch(format) {
+        switch (format) {
           case 'html':
             results.html = processCV(cv.data, templateContent, 'html');
             break;
@@ -464,6 +464,41 @@ async function exportBatch(req, res) {
   }
 }
 
+// ... (resto do cÃ³digo)
+
+// Exportar para DOCX
+async function exportDOCX(req, res) {
+  try {
+    s
+    const { cvId } = req.body;
+
+    if (!cvId) {
+      return res.status(400).json({ error: 'cvId Ã© obrigatÃ³rio.' });
+    }
+
+    const cv = await CV.findOne({
+      _id: cvId,
+      owner: req.user.id
+    }).lean();
+
+    if (!cv) {
+      return res.status(404).json({ error: 'CV nÃ£o encontrado.' });
+    }
+
+    const docxBuffer = await generateDocxBuffer(cv.data);
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': 'attachment; filename="cv.docx"'
+    });
+
+    return res.send(docxBuffer);
+
+  } catch (err) {
+    console.error('Erro ao gerar DOCX:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
 module.exports = {
   exportPDF,
   exportJSON,
@@ -472,5 +507,6 @@ module.exports = {
   exportMarkdown,
   exportText,
   exportWithTemplate,
-  exportBatch
+  exportBatch,
+  exportDOCX
 };

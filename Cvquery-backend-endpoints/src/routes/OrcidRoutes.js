@@ -1,4 +1,3 @@
-// backend/src/routes/orcidRoutes.js
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -7,27 +6,53 @@ const qs = require('qs');
 const OrcidToken = require('../models/OrcidToken');
 const CV = require('../models/CV');
 
-// URL de autorização ORCID
 const ORCID_AUTH_URL = 'https://orcid.org/oauth/authorize';
 const ORCID_TOKEN_URL = 'https://orcid.org/oauth/token';
 const ORCID_API_URL = process.env.ORCID_API_URL || 'https://pub.orcid.org/v3.0';
 
-// Iniciar fluxo de autenticação ORCID
-router.get('/auth', auth, (req, res) => {
-  const params = qs.stringify({
-    client_id: process.env.ORCID_CLIENT_ID,
-    response_type: 'code',
-    scope: '/read-limited',
-    redirect_uri: process.env.ORCID_REDIRECT_URI,
-    state: req.user.id
-  });
-  
-  res.redirect(`${ORCID_AUTH_URL}?${params}`);
+// ⭐ Rota /auth - envia o userId como state
+router.get('/auth', auth, async (req, res) => {
+  try {
+    // Verificar se as variáveis ORCID estão configuradas
+    if (!process.env.ORCID_CLIENT_ID || process.env.ORCID_CLIENT_ID === 'APP-YOUR_CLIENT_ID_HERE') {
+      return res.json({ 
+        authUrl: null,
+        mockMode: true,
+        message: 'Modo de demonstração - ORCID não configurado'
+      });
+    }
+    
+    // ⭐ O state deve ser o userId (ObjectId), não o token JWT
+    const state = req.user.id;  // ← Isto é o ObjectId do utilizador
+    
+    const params = qs.stringify({
+      client_id: process.env.ORCID_CLIENT_ID,
+      response_type: 'code',
+      scope: '/read-public',
+      redirect_uri: process.env.ORCID_REDIRECT_URI,
+      state: state
+    });
+    
+    const authUrl = `${ORCID_AUTH_URL}?${params}`;
+    console.log(' URL ORCID gerada com sucesso');
+    console.log(' State (userId):', state);
+    
+    res.json({ authUrl });
+  } catch (err) {
+    console.error(' Erro ao gerar URL ORCID:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Callback após autenticação
+// ⭐ Rota /callback - recebe o state como userId
 router.get('/callback', async (req, res) => {
   const { code, state } = req.query;
+  
+  console.log(' Callback recebido:', { code: code ? 'sim' : 'não', state });
+  
+  if (!code) {
+    return res.status(400).json({ error: 'Código de autorização em falta' });
+  }
   
   try {
     // Trocar código por token
@@ -42,25 +67,55 @@ router.get('/callback', async (req, res) => {
     });
     
     const { access_token, refresh_token, expires_in, orcid } = tokenResponse.data;
+    console.log('✅ Token obtido para ORCID:', orcid);
     
-    // Guardar token
-    await OrcidToken.findOneAndUpdate(
-      { userId: state, orcidId: orcid },
-      { accessToken: access_token, refreshToken: refresh_token, expiresAt: Date.now() + expires_in * 1000 },
-      { upsert: true }
-    );
+    // ⭐ Verificar se o state é um ObjectId válido do MongoDB
+    const mongoose = require('mongoose');
+    const User = require('../models/User');
     
-    res.redirect(`${process.env.FRONTEND_URL}/import/orcid?success=true`);
+    let user = null;
+    
+    // Verificar se o state é um ObjectId válido
+    if (mongoose.Types.ObjectId.isValid(state)) {
+      user = await User.findById(state);
+    }
+    
+    if (user) {
+      // Guardar o token associado ao utilizador
+      await OrcidToken.findOneAndUpdate(
+        { userId: user._id, orcidId: orcid },
+        { 
+          accessToken: access_token, 
+          refreshToken: refresh_token, 
+          expiresAt: Date.now() + expires_in * 1000 
+        },
+        { upsert: true }
+      );
+      console.log('✅ Token guardado para utilizador:', user.email);
+    } else {
+      console.warn(' State não é um ObjectId válido ou utilizador não encontrado:', state);
+      // Se não encontrar o utilizador, redireciona para o login
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      return res.redirect(`${frontendUrl}/login?error=orcid_auth_failed`);
+    }
+    
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/import/orcid?success=true`);
   } catch (err) {
-    console.error('Erro ORCID:', err);
-    res.redirect(`${process.env.FRONTEND_URL}/import/orcid?error=true`);
+    console.error(' Erro no callback ORCID:', err.response?.data || err.message);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/import/orcid?error=true`);
   }
 });
 
-// Obter dados do ORCID
+// ⭐ Rota /fetch - buscar dados do ORCID
 router.post('/fetch', auth, async (req, res) => {
   try {
     const { orcidId } = req.body;
+    
+    if (!orcidId) {
+      return res.status(400).json({ error: 'ORCID ID é obrigatório' });
+    }
     
     // Buscar token do utilizador
     const tokenDoc = await OrcidToken.findOne({ userId: req.user.id, orcidId });
@@ -126,7 +181,7 @@ router.post('/fetch', auth, async (req, res) => {
   }
 });
 
-// Criar CV a partir dos dados ORCID
+// ⭐ Rota /create-cv - criar CV a partir dos dados ORCID
 router.post('/create-cv', auth, async (req, res) => {
   try {
     const { orcidId, cvData, cvName } = req.body;

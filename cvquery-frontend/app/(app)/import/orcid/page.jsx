@@ -32,7 +32,7 @@ export default function ImportOrcid() {
     setMessage("");
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ;
       const token = localStorage.getItem("cvquery_token");
       
       const response = await fetch(`${API_URL}/api/orcid/auth`, {

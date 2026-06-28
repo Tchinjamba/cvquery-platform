@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   }
 
   const api = (path, opts = {}) => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const base = process.env.NEXT_PUBLIC_API_URL;
     return fetch(`${base}${path}`, {
       ...opts,
       headers: {

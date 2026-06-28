@@ -17,41 +17,41 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
-    
+
     if (password !== confirmPassword) {
       setError("As passwords não coincidem");
       return;
     }
-    
+
     if (password.length < 6) {
       setError("A password deve ter pelo menos 6 caracteres");
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || "Erro ao criar conta");
       }
-      
+
       // Mostrar mensagem de sucesso
       setSuccess("Conta criada com sucesso! A ser redirecionado para o login...");
-      
+
       // Redirecionar para a página de login após 2 segundos
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-      
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -60,10 +60,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      display: "flex", 
-      alignItems: "center", 
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
       justifyContent: "center",
       background: "#f8fafc"
     }}>
@@ -162,11 +162,11 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <div style={{ 
-              marginBottom: "16px", 
-              padding: "10px", 
-              background: "#fee2e2", 
-              color: "#dc2626", 
+            <div style={{
+              marginBottom: "16px",
+              padding: "10px",
+              background: "#fee2e2",
+              color: "#dc2626",
               borderRadius: "8px",
               fontSize: "14px"
             }}>
@@ -175,11 +175,11 @@ export default function RegisterPage() {
           )}
 
           {success && (
-            <div style={{ 
-              marginBottom: "16px", 
-              padding: "10px", 
-              background: "#d1fae5", 
-              color: "#065f46", 
+            <div style={{
+              marginBottom: "16px",
+              padding: "10px",
+              background: "#d1fae5",
+              color: "#065f46",
               borderRadius: "8px",
               fontSize: "14px"
             }}>

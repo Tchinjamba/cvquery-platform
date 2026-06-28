@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { AuthProvider, useAuth } from "../../context/AuthContext";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -367,5 +367,11 @@ function LoginPage() {
 }
 
 export default function Login() {
-  return <AuthProvider><LoginPage /></AuthProvider>;
+  return (
+    <AuthProvider>
+      <Suspense>
+        <LoginPage />
+      </Suspense>
+    </AuthProvider>
+  );
 }

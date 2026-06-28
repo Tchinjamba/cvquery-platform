@@ -15,7 +15,7 @@ function LoginPage() {
   const [password, setPass] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const API = process.env.NEXT_PUBLIC_API_URL;
 
   async function handleSubmit(e) {
     e.preventDefault();

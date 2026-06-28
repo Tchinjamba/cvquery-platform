@@ -95,15 +95,15 @@ router.get('/callback', async (req, res) => {
     } else {
       console.warn(' State não é um ObjectId válido ou utilizador não encontrado:', state);
       // Se não encontrar o utilizador, redireciona para o login
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.FRONTEND_URL;
       return res.redirect(`${frontendUrl}/login?error=orcid_auth_failed`);
     }
-    
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    const frontendUrl = process.env.FRONTEND_URL;
     res.redirect(`${frontendUrl}/import/orcid?success=true`);
   } catch (err) {
     console.error(' Erro no callback ORCID:', err.response?.data || err.message);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL;
     res.redirect(`${frontendUrl}/import/orcid?error=true`);
   }
 });

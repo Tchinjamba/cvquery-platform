@@ -3,80 +3,123 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
-// ⭐ Templates de exemplo iniciais
+// ⭐ Templates de exemplo com a sintaxe OFICIAL da CVQuery (conforme https://curriculox.org/tutorials)
 const INITIAL_EXAMPLES = [
   { 
     name: "Cabeçalho simples", 
-    body: "Nome: $.name\nEmail: $.contact.email\nTelefone: $.contact.phone" 
+    body: `Nome: /** $.name **/
+Email: /** $.contact.email **/
+Telefone: /** $.contact.phone **/` 
   },
   { 
-    name: "Profissional", 
-    body: `# {{$.name}}
+    name: "Profissional (oficial)", 
+    body: `/** $.name **/
 
-**Email:** {{$.contact.email}}
-**Telefone:** {{$.contact.phone}}
+/** $.contact.email **/  /** $.contact.phone **/
 
-## Experiência Profissional
-{{#each $.experience}}
-### {{title}} na {{company}}
-*{{startDate}} - {{endDate}}*
-{{description}}
-{{/each}}
+/** $( $.experience/--!==undefined && $.experience.length > 0 --/ ){
+  Experiência Profissional:
+  /** ($.experience.$exp, [[startDate, DESC]]) => {
+    $exp.position na $exp.company
+    Período: $exp.startDate - $( $exp.endDate/--!==undefined--/ ){ $exp.endDate }{ Presente }
+    $( $exp.responsibilities/--!==undefined--/ ){
+      Responsabilidades:
+      $exp.responsibilities.$resp{
+        • $resp\\n
+      }
+    }
+    \\n
+  } **/
+} **/
 
-## Competências
-{{#each $.skills}}
-- {{.}}
-{{/each}}` 
+/** $( $.skills/--!==undefined && $.skills.length > 0 --/ ){
+  Competências:
+  /** ($.skills.$skill) => {
+    • $skill\\n
+  } **/
+} **/` 
   },
   { 
-    name: "Académico", 
-    body: `# {{$.name}}
+    name: "Académico (oficial)", 
+    body: `/** $.name **/
 
-**Email:** {{$.contact.email}}
-**Telefone:** {{$.contact.phone}}
-**ORCID:** {{$.orcid}}
+/** $.contact.email **/  /** $.contact.phone **/
+ORCID: /** $.orcid **/
 
-## Publicações
-{{#each $.publications}}
-- {{title}} ({{year}}) - {{journal}}
-{{/each}}
+/** $( $.publications/--!==undefined && $.publications.length > 0 --/ ){
+  Publicações:
+  /** ($.publications.$pub, [[year, DESC]]) => {
+    • "$pub.title" ($pub.year) - $pub.journal\\n
+  } **/
+} **/
 
-## Formação Académica
-{{#each $.education}}
-- {{degree}} em {{institution}} ({{year}})
-{{/each}}` 
+/** $( $.education/--!==undefined && $.education.length > 0 --/ ){
+  Formação Académica:
+  /** ($.education.$edu, [[year, DESC]]) => {
+    • $edu.degree em $edu.institution ($edu.year)\\n
+  } **/
+} **/` 
   },
   { 
-    name: "Completo", 
-    body: `# {{$.name}}
+    name: "Completo (oficial)", 
+    body: `=== /** $.name **/ ===
+Email: /** $.contact.email **/
+Telefone: /** $.contact.phone **/
 
-**Email:** {{$.contact.email}}
-**Telefone:** {{$.contact.phone}}
+/** $( $.objective/--!==undefined --/ ){
+  Objetivo:
+  /** $.objective **/
+} **/
 
-## Objetivo
-{{$.objective}}
+/** $( $.experience/--!==undefined && $.experience.length > 0 --/ ){
+  Experiência Profissional:
+  /** ($.experience.$exp, [[startDate, DESC]]) => {
+    $exp.position na $exp.company
+    Período: $exp.startDate - $( $exp.endDate/--!==undefined--/ ){ $exp.endDate }{ Presente }
+    $( $exp.responsibilities/--!==undefined--/ ){
+      Responsabilidades:
+      $exp.responsibilities.$resp{
+        • $resp\\n
+      }
+    }
+    \\n
+  } **/
+} **/
 
-## Experiência Profissional
-{{#each $.experience}}
-### {{title}} na {{company}}
-*{{startDate}} - {{endDate}}*
-{{description}}
-{{/each}}
+/** $( $.education/--!==undefined && $.education.length > 0 --/ ){
+  Formação Académica:
+  /** ($.education.$edu, [[year, DESC]]) => {
+    • $edu.degree em $edu.institution ($edu.year)\\n
+  } **/
+} **/
 
-## Formação Académica
-{{#each $.education}}
-- {{degree}} em {{institution}} ({{year}})
-{{/each}}
+/** $( $.publications/--!==undefined && $.publications.length > 0 --/ ){
+  Publicações:
+  /** ($.publications.$pub, [[year, DESC]]) => {
+    • "$pub.title" ($pub.year) - $pub.journal\\n
+  } **/
+} **/
 
-## Publicações
-{{#each $.publications}}
-- {{title}} ({{year}}) - {{journal}}
-{{/each}}
+/** $( $.skills/--!==undefined && $.skills.length > 0 --/ ){
+  Competências:
+  /** ($.skills.$skill) => {
+    • $skill\\n
+  } **/
+} **/
 
-## Competências
-{{#each $.skills}}
-- {{.}}
-{{/each}}` 
+/** $( $.languages/--!==undefined && $.languages.length > 0 --/ ){
+  Idiomas:
+  /** ($.languages.$lang) => {
+    • $lang.name - $lang.level\\n
+  } **/
+} **/
+
+/** $( $.certifications/--!==undefined && $.certifications.length > 0 --/ ){
+  Certificados:
+  /** ($.certifications.$cert) => {
+    • $cert.title - $cert.institution ($cert.date)\\n
+  } **/
+} **/` 
   }
 ];
 
@@ -100,12 +143,10 @@ function processEachBlocks(template, data) {
     return array.map(item => {
       let processedBlock = blockContent;
       
-      // Substituir {{.}} pelo item inteiro (apenas se for string/número)
       if (typeof item === 'string' || typeof item === 'number') {
         processedBlock = processedBlock.replace(/\{\{\.\}\}/g, String(item));
       }
       
-      // Substituir {{campo}} pelos campos do item
       if (typeof item === 'object' && item !== null) {
         processedBlock = processedBlock.replace(/\{\{(\w+)\}\}/g, (m, key) => {
           return item[key] !== undefined ? String(item[key]) : '';
@@ -120,10 +161,8 @@ function processEachBlocks(template, data) {
 function processTemplate(template, cvData) {
   let result = template;
   
-  // Processar blocos {{#each}} primeiro
   result = processEachBlocks(result, cvData);
   
-  // Substituir variáveis: {{$.campo}}
   result = result.replace(/\{\{\$\.([\w.]+)\}\}/g, (match, path) => {
     const value = getNestedValue(cvData, path);
     return value !== undefined ? String(value) : '';
@@ -132,33 +171,21 @@ function processTemplate(template, cvData) {
   return result;
 }
 
-// ⭐ Conversão markdown para HTML melhorada
 function markdownToHtml(markdown) {
+  // função inalterada
   let html = markdown;
-  
-  // Escapar HTML primeiro para evitar injeção
   html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  
-  // Headers (deve vir antes de outras formatações)
   html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: 600; margin: 16px 0 8px 0; color: #1a1a1a;">$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 18px; font-weight: 600; margin: 20px 0 10px 0; color: #003D8F; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px;">$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #003D8F;">$1</h1>');
-  
-  // Bold
   html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-  
-  // Italic
   html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-  
-  // Lists - processar blocos de lista
   const lines = html.split('\n');
   let inList = false;
   let result = [];
-  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const listItemMatch = line.match(/^\- (.*$)/);
-    
     if (listItemMatch) {
       if (!inList) {
         result.push('<ul style="margin: 8px 0; padding-left: 24px;">');
@@ -173,22 +200,15 @@ function markdownToHtml(markdown) {
       result.push(line);
     }
   }
-  
   if (inList) {
     result.push('</ul>');
   }
-  
   html = result.join('\n');
-  
-  // Parágrafos - converter linhas duplas em parágrafos
   html = html.replace(/\n\n/g, '</p><p style="margin: 8px 0;">');
   html = html.replace(/\n/g, '<br>');
-  
-  // Envolver em parágrafo se não começar com tag HTML
   if (!html.startsWith('<')) {
     html = '<p style="margin: 8px 0;">' + html + '</p>';
   }
-  
   return html;
 }
 
@@ -205,7 +225,7 @@ export default function TemplateEditor() {
   const [cvs, setCvs] = useState([]);
   const [selectedCV, setSelectedCV] = useState(null);
   const [previewFormat, setPreviewFormat] = useState("html");
-  const [activeTab, setActiveTab] = useState("edit"); // ⭐ NOVO: "edit" ou "preview"
+  const [activeTab, setActiveTab] = useState("edit");
   const [examples, setExamples] = useState(INITIAL_EXAMPLES);
 
   useEffect(() => {
@@ -238,12 +258,10 @@ export default function TemplateEditor() {
       const res = await api("/api/cv");
       const data = await res.json();
       setCvs(Array.isArray(data) ? data : []);
-      
       if (Array.isArray(data) && data.length > 0) {
         setSelectedCV(data[0]);
       } else {
         setSelectedCV(null);
-        console.warn("Nenhum CV encontrado");
       }
     } catch (error) {
       console.error("Erro ao carregar CVs:", error);
@@ -257,7 +275,7 @@ export default function TemplateEditor() {
     setName(t.name || "");
     setError("");
     setSaved(false);
-    setActiveTab("edit"); // ⭐ Voltar para aba editar
+    setActiveTab("edit");
   }
 
   function newTemplate() {
@@ -266,7 +284,7 @@ export default function TemplateEditor() {
     setName("Novo template");
     setError("");
     setSaved(false);
-    setActiveTab("edit"); // ⭐ Voltar para aba editar
+    setActiveTab("edit");
   }
 
   function selectCV(cv) {
@@ -278,7 +296,6 @@ export default function TemplateEditor() {
       setError("O template precisa de um nome.");
       return;
     }
-
     setSaving(true);
     setError("");
     setSaved(false);
@@ -295,10 +312,8 @@ export default function TemplateEditor() {
           body: JSON.stringify({ name, body: body })
         });
       }
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao guardar template");
-
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       loadTemplates();
@@ -315,9 +330,7 @@ export default function TemplateEditor() {
       setError("O template precisa de nome e conteúdo para ser guardado como exemplo.");
       return;
     }
-
     const newExample = { name: name.trim(), body: body.trim() };
-    
     if (examples.some(e => e.name === newExample.name)) {
       if (!confirm(`Já existe um exemplo com o nome "${newExample.name}". Deseja substituí-lo?`)) {
         return;
@@ -332,7 +345,6 @@ export default function TemplateEditor() {
       setTimeout(() => setExampleSaved(false), 2000);
       return;
     }
-
     const updated = [...examples, newExample];
     setExamples(updated);
     const userExamples = updated.filter(e => 
@@ -372,10 +384,9 @@ export default function TemplateEditor() {
     setBody(example.body);
     setError("");
     setSaved(false);
-    setActiveTab("edit"); // ⭐ Voltar para aba editar
+    setActiveTab("edit");
   }
 
-  // ⭐ Processar template para visualização
   const processedPreview = selectedCV && body.trim() ? processTemplate(body, selectedCV) : "";
 
   if (error && !templates.length && !cvs.length) {
@@ -439,139 +450,156 @@ export default function TemplateEditor() {
       </div>
 
       <div style={{ padding: "24px 32px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24 }}>
-          {/* Sidebar esquerda - Templates */}
-          <div style={{ border: "1px solid #E0E0E0", borderRadius: 8, overflow: "hidden" }}>
-            <div style={{ padding: "12px 16px", background: "#F8F8F8", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
-              Meus Templates
-            </div>
-            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-              {templates.length === 0 && (
-                <div style={{ padding: "12px 16px", color: "#999" }}>Nenhum template ainda.</div>
-              )}
-              {templates.map(t => (
-                <button
-                  key={t._id}
-                  onClick={() => selectTemplate(t)}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 16px",
-                    border: "none",
-                    background: selected?._id === t._id ? "#e0e7ff" : "transparent",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f0f0f0",
-                    fontWeight: selected?._id === t._id ? 500 : 400
-                  }}
-                >
-                  {t.name}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ padding: "12px 16px", background: "#F8F8F8", borderTop: "1px solid #E0E0E0", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
-              Exemplos {exampleSaved && <span style={{ color: "#16a34a", fontSize: 11 }}>✓ Guardado</span>}
-            </div>
-            {examples.map((e, i) => {
-              const isUserExample = !INITIAL_EXAMPLES.some(init => init.name === e.name);
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
+          {/* Sidebar esquerda - com alturas iguais entre as três secções */}
+          <div style={{ 
+            border: "1px solid #E0E0E0", 
+            borderRadius: 8, 
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: "calc(100vh - 220px)", // ajuste para ocupar a altura disponível
+            maxHeight: "700px" // opcional, para não exceder demasiado
+          }}>
+            {/* Meus Templates */}
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+              <div style={{ padding: "12px 16px", background: "#F8F8F8", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
+                Meus Templates
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+                {templates.length === 0 && (
+                  <div style={{ padding: "12px 16px", color: "#999" }}>Nenhum template ainda.</div>
+                )}
+                {templates.map(t => (
                   <button
-                    onClick={() => loadExample(e)}
+                    key={t._id}
+                    onClick={() => selectTemplate(t)}
                     style={{
-                      flex: 1,
                       display: "block",
                       width: "100%",
                       textAlign: "left",
                       padding: "10px 16px",
                       border: "none",
-                      background: "transparent",
+                      background: selected?._id === t._id ? "#e0e7ff" : "transparent",
                       cursor: "pointer",
                       borderBottom: "1px solid #f0f0f0",
-                      fontWeight: selected?._id === e._id ? 500 : 400
+                      fontWeight: selected?._id === t._id ? 500 : 400
                     }}
                   >
-                    {e.name}
-                    {isUserExample && (
-                      <span style={{ 
-                        fontSize: 9, 
-                        color: "#3b82f6", 
-                        marginLeft: 6,
-                        background: "#dbeafe",
-                        padding: "1px 6px",
-                        borderRadius: 4
-                      }}>
-                        usuário
-                      </span>
-                    )}
+                    {t.name}
                   </button>
-                  {isUserExample && (
-                    <button
-                      onClick={() => handleDeleteExample(e.name)}
-                      style={{
-                        padding: "4px 8px",
-                        background: "none",
-                        border: "none",
-                        color: "#dc2626",
-                        cursor: "pointer",
-                        fontSize: 12
-                      }}
-                      title="Apagar exemplo"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Lista de CVs */}
-            <div style={{ padding: "12px 16px", background: "#F8F8F8", borderTop: "1px solid #E0E0E0", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
-              Os meus CVs
+                ))}
+              </div>
             </div>
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {cvs.length === 0 && (
-                <div style={{ padding: "12px 16px", color: "#999" }}>Nenhum CV ainda.</div>
-              )}
-              {cvs.map(cv => (
-                <button
-                  key={cv._id}
-                  onClick={() => selectCV(cv)}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 16px",
-                    border: "none",
-                    background: selectedCV?._id === cv._id ? "#e0e7ff" : "transparent",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f0f0f0",
-                    transition: "background 0.15s"
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedCV?._id !== cv._id) {
-                      e.currentTarget.style.background = "#f5f5f5";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedCV?._id !== cv._id) {
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  <div style={{ fontWeight: selectedCV?._id === cv._id ? 500 : 400, fontSize: 13 }}>{cv.name}</div>
-                  <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-                    {new Date(cv.updatedAt).toLocaleDateString()}
-                  </div>
-                </button>
-              ))}
+
+            {/* Exemplos */}
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderTop: "1px solid #E0E0E0" }}>
+              <div style={{ padding: "12px 16px", background: "#F8F8F8", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
+                Exemplos {exampleSaved && <span style={{ color: "#16a34a", fontSize: 11 }}>✓ Guardado</span>}
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+                {examples.map((e, i) => {
+                  const isUserExample = !INITIAL_EXAMPLES.some(init => init.name === e.name);
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center" }}>
+                      <button
+                        onClick={() => loadExample(e)}
+                        style={{
+                          flex: 1,
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 16px",
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          borderBottom: "1px solid #f0f0f0",
+                          fontWeight: selected?._id === e._id ? 500 : 400
+                        }}
+                      >
+                        {e.name}
+                        {isUserExample && (
+                          <span style={{ 
+                            fontSize: 9, 
+                            color: "#3b82f6", 
+                            marginLeft: 6,
+                            background: "#dbeafe",
+                            padding: "1px 6px",
+                            borderRadius: 4
+                          }}>
+                            usuário
+                          </span>
+                        )}
+                      </button>
+                      {isUserExample && (
+                        <button
+                          onClick={() => handleDeleteExample(e.name)}
+                          style={{
+                            padding: "4px 8px",
+                            background: "none",
+                            border: "none",
+                            color: "#dc2626",
+                            cursor: "pointer",
+                            fontSize: 12
+                          }}
+                          title="Apagar exemplo"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Os meus CVs */}
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderTop: "1px solid #E0E0E0" }}>
+              <div style={{ padding: "12px 16px", background: "#F8F8F8", borderBottom: "1px solid #E0E0E0", fontWeight: 500 }}>
+                Os meus CVs
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+                {cvs.length === 0 && (
+                  <div style={{ padding: "12px 16px", color: "#999" }}>Nenhum CV ainda.</div>
+                )}
+                {cvs.map(cv => (
+                  <button
+                    key={cv._id}
+                    onClick={() => selectCV(cv)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 16px",
+                      border: "none",
+                      background: selectedCV?._id === cv._id ? "#e0e7ff" : "transparent",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #f0f0f0",
+                      transition: "background 0.15s"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedCV?._id !== cv._id) {
+                        e.currentTarget.style.background = "#f5f5f5";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedCV?._id !== cv._id) {
+                        e.currentTarget.style.background = "transparent";
+                      }
+                    }}
+                  >
+                    <div style={{ fontWeight: selectedCV?._id === cv._id ? 500 : 400, fontSize: 13 }}>{cv.name}</div>
+                    <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
+                      {new Date(cv.updatedAt).toLocaleDateString()}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Área principal com tabs */}
+          {/* Área principal com tabs (inalterada) */}
           <div style={{ border: "1px solid #E0E0E0", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            {/* ⭐ Tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid #E0E0E0", background: "#F8F8F8" }}>
               <button
                 onClick={() => setActiveTab("edit")}
@@ -607,10 +635,8 @@ export default function TemplateEditor() {
               </button>
             </div>
 
-            {/* Conteúdo da tab */}
             {activeTab === "edit" ? (
               <>
-                {/* Header do editor */}
                 <div style={{ padding: "12px 16px", background: "#FFFFFF", borderBottom: "1px solid #E0E0E0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <input
                     value={name}
@@ -636,7 +662,6 @@ export default function TemplateEditor() {
                   </div>
                 )}
 
-                {/* Editor */}
                 <textarea
                   value={body}
                   onChange={e => setBody(e.target.value)}
@@ -655,22 +680,20 @@ export default function TemplateEditor() {
                   }}
                   placeholder={`Escreva o template aqui...
 
-Exemplo:
-Nome: $.name
-Email: $.contact.email
-
-{{#each $.experience}}
-• {{title}} na {{company}} ({{startDate}} - {{endDate}})
-{{/each}}`}
+Exemplo com sintaxe oficial:
+Nome: /** $.name **/
+Email: /** $.contact.email **/
+/** ($.experience.$exp, [[startDate, DESC]]) => {
+  $exp.position na $exp.company
+} **/`}
                 />
 
                 <div style={{ padding: "8px 16px", background: "#F8F8F8", borderTop: "1px solid #E0E0E0", fontSize: 11, color: "#999" }}>
-                  💡 Use <code style={{ background: "#E0E0E0", padding: "2px 6px", borderRadius: 4 }}>$.campo</code> para aceder aos dados do CV
+                  💡 Use <code style={{ background: "#E0E0E0", padding: "2px 6px", borderRadius: 4 }}>/** ... **/</code> para expressões, <code style={{ background: "#E0E0E0", padding: "2px 6px", borderRadius: 4 }}>$.campo</code> para aceder aos dados.
                 </div>
               </>
             ) : (
               <>
-                {/* Header da visualização */}
                 <div style={{ padding: "12px 16px", background: "#FFFFFF", borderBottom: "1px solid #E0E0E0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     CV: <strong>{selectedCV?.name || "Nenhum"}</strong>
@@ -692,7 +715,6 @@ Email: $.contact.email
                   </select>
                 </div>
 
-                {/* Área de visualização */}
                 <div style={{ 
                   flex: 1,
                   overflow: "auto",

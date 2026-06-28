@@ -5,9 +5,9 @@ const SECTIONS = [
   {
     id: "intro",
     title: "O que é o CVQuery?",
-    content: `O CVQuery é uma linguagem criada para **interrogar bases de dados NoSQL (MongoDB)** no sentido de extrair dados e gerar texto para geração de currículos.
+    content: `O CVQuery é uma linguagem criada para **interrogar bases de dados NoSQL (MongoDB)** no sentido de extrair dados e gerar texto para geração de currículos. A sua filosofia assenta num pressuposto fundamental: **a informação de um currículo não deve estar em formato documental (Word/LaTeX/…)**, mas sim como **dados estruturados** que possam ser facilmente utilizados para produzir currículos em diferentes formatos — documental (Word/LaTeX), HTML, Markdown, ou outros.
 
-A sua filosofia assenta num pressuposto fundamental: **a informação de um currículo não deve estar em formato documental (Word/LaTeX/…)**, mas sim como **dados estruturados** que possam ser facilmente utilizados para produzir currículos em diferentes formatos — documental (Word/LaTeX), HTML, Markdown, ou outros.
+A linguagem CVQuery foi desenvolvida pelo **Professor Doutor Paulo Matos**, docente do Instituto Politécnico de Bragança (IPB), com o objetivo de criar uma ponte entre JavaScript, LaTeX e TypeScript para manipulação avançada de dados.
 
 **Conceito chave:** Dados em JSON → Query → Documento gerado em qualquer formato.
 
@@ -18,20 +18,20 @@ A plataforma **CurriculumX** é a implementação prática desta linguagem, disp
     title: "Delimitadores — /** ... **/",
     content: `Tudo dentro de /** e **/ é processado pela linguagem CVQuery. Tudo o que está fora é texto literal.`,
     examples: [
-      {
-        label: "Expressão simples",
-        code: `/** $.name **/`,
-        desc: "Processa o campo 'name' do JSON"
+      { 
+        label: "Expressão simples", 
+        code: `/** $.name **/`, 
+        desc: "Processa o campo 'name' do JSON" 
       },
-      {
-        label: "Texto misto",
+      { 
+        label: "Texto misto", 
         code: `Nome: /** $.name **/`,
-        desc: "Texto literal + expressão processada"
+        desc: "Texto literal + expressão processada" 
       },
-      {
-        label: "Expressão de iteração",
+      { 
+        label: "Expressão de iteração", 
         code: `/** ($.pubs.pub, [[year, DESC]]) => { $item.title } **/`,
-        desc: "Itera sobre publicações ordenadas por ano"
+        desc: "Itera sobre publicações ordenadas por ano" 
       }
     ]
   },
@@ -74,29 +74,29 @@ Label: Publications`
 
 **Blocos especiais:** \`first:\`, \`common:\` e \`last:\` permitem tratar o primeiro, os comuns e o último registo de forma diferente.`,
     examples: [
-      {
-        label: "Iteração simples",
+      { 
+        label: "Iteração simples", 
         code: `/** $.expprof.pubs.$pub{ $pub.title } **/`,
-        desc: "Itera sobre publicações e mostra os títulos"
+        desc: "Itera sobre publicações e mostra os títulos" 
       },
-      {
-        label: "Com formatação",
+      { 
+        label: "Com formatação", 
         code: `/** $.expprof.pubs.$pub{ $pub.title, $pub.year } **/`,
-        desc: "Mostra título e ano com vírgula"
+        desc: "Mostra título e ano com vírgula" 
       },
-      {
-        label: "Com first/common/last",
+      { 
+        label: "Com first/common/last", 
         code: `/** $.expprof.pubs.$pub{
   first: { "Primeiro: $pub.title\\n" }
   common: { "$pub.title\\n" }
   last: { "Último: $pub.title\\n" }
 } **/`,
-        desc: "Trata o primeiro, os comuns e o último de forma diferente"
+        desc: "Trata o primeiro, os comuns e o último de forma diferente" 
       },
-      {
-        label: "Com ordenação",
+      { 
+        label: "Com ordenação", 
         code: `/** ($.expprof.pubs.$pub, [[year, DESC]]) => { $pub.title, $pub.year } **/`,
-        desc: "Itera ordenando por ano descendente"
+        desc: "Itera ordenando por ano descendente" 
       },
     ],
     demo: {
@@ -126,30 +126,30 @@ Label: Publications`
 
 **Permite:** cálculos, filtros, condicionais, e qualquer operação JavaScript.`,
     examples: [
-      {
-        label: "Expressão simples",
+      { 
+        label: "Expressão simples", 
         code: `/** /-- $pub.year --/ **/`,
-        desc: "Avalia e insere o valor do campo year"
+        desc: "Avalia e insere o valor do campo year" 
       },
-      {
-        label: "Cálculo",
+      { 
+        label: "Cálculo", 
         code: `/** /-- new Date().getFullYear() - $pub.year --/ **/`,
-        desc: "Calcula anos desde a publicação"
+        desc: "Calcula anos desde a publicação" 
       },
-      {
-        label: "Condicional",
+      { 
+        label: "Condicional", 
         code: `/** /-- $pub.year > 2020 ? 'Recente' : 'Antigo' --/ **/`,
-        desc: "Lógica condicional inline"
+        desc: "Lógica condicional inline" 
       },
-      {
-        label: "Filtro",
+      { 
+        label: "Filtro", 
         code: `/** ($.expprof.pubs.$pub/--.filter(p => p.year > 2020)--/) => { $pub.title } **/`,
-        desc: "Filtra publicações posteriores a 2020 antes de iterar"
+        desc: "Filtra publicações posteriores a 2020 antes de iterar" 
       },
-      {
-        label: "Ordenação combinada",
+      { 
+        label: "Ordenação combinada", 
         code: `/** ($.expprof.pubs.$pub/--.sort((a,b) => a.year - b.year)--/) => { $pub.title } **/`,
-        desc: "Ordena por ano antes de iterar"
+        desc: "Ordena por ano antes de iterar" 
       },
     ],
     demo: {
@@ -184,20 +184,20 @@ Publicações recentes:
 
 **Sintaxe:** \\\$(\\\${condição}){ conteúdo }`,
     examples: [
-      {
-        label: "Verificar se a secção existe",
+      { 
+        label: "Verificar se a secção existe", 
         code: `/** $( $.expprof.pubs/--!==undefined--/ ){ "Tem publicações" } **/`,
-        desc: "Mostra 'Tem publicações' se a secção existir"
+        desc: "Mostra 'Tem publicações' se a secção existir" 
       },
-      {
-        label: "Verificar se há registos",
+      { 
+        label: "Verificar se há registos", 
         code: `/** $( $.expprof.pubs/--.length>0--/ ){ "\\nPublicações:\\n" } **/`,
-        desc: "Mostra 'Publicações:' se houver pelo menos um registo"
+        desc: "Mostra 'Publicações:' se houver pelo menos um registo" 
       },
-      {
-        label: "Verificar campo específico",
+      { 
+        label: "Verificar campo específico", 
         code: `/** $( $.expprof.pubs.pub/--.some(p => p.year > 2020)--/ ){ "Tem publicações recentes" } **/`,
-        desc: "Verifica se há alguma publicação depois de 2020"
+        desc: "Verifica se há alguma publicação depois de 2020" 
       },
     ],
     demo: {
@@ -231,20 +231,20 @@ Tem 2 publicações.`
 
 **Nota:** Para escrever o símbolo \ (backslash) como texto, usa-se **\\\\\\\**.`,
     examples: [
-      {
-        label: "Inserir espaço",
+      { 
+        label: "Inserir espaço", 
         code: `/** $pub.title,\\ $pub.year **/`,
-        desc: "Adiciona uma vírgula e um espaço entre título e ano"
+        desc: "Adiciona uma vírgula e um espaço entre título e ano" 
       },
-      {
-        label: "Inserir nova linha",
+      { 
+        label: "Inserir nova linha", 
         code: `/** $pub.title\\n **/`,
-        desc: "Adiciona uma nova linha após o título"
+        desc: "Adiciona uma nova linha após o título" 
       },
-      {
-        label: "Combinado",
+      { 
+        label: "Combinado", 
         code: `/** \\"$pub.title\\" ($pub.year)\\n **/`,
-        desc: "Título entre aspas, ano entre parênteses, nova linha no final"
+        desc: "Título entre aspas, ano entre parênteses, nova linha no final" 
       },
     ],
     demo: {
@@ -349,44 +349,44 @@ export default function DocsPage() {
   return (
     <>
       {/* Navbar */}
-      <div className="page-header" style={{
-        background: "#003D8F",
-        borderBottom: "1px solid #1E40AF",
-        padding: "24px 32px 16px 32px"
+      <div className="page-header" style={{ 
+        background: "#003D8F", 
+        borderBottom: "1px solid #1E40AF", 
+        padding: "24px 32px 16px 32px" 
       }}>
         <div>
-          <h1 className="page-title" style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            color: "#FFFFFF",
-            marginBottom: 4
+          <h1 className="page-title" style={{ 
+            fontSize: "24px", 
+            fontWeight: 600, 
+            color: "#FFFFFF", 
+            marginBottom: 4 
           }}>Documentação CVQuery</h1>
-          <p className="page-subtitle" style={{
-            fontSize: "14px",
-            color: "rgba(255,255,255,0.8)"
+          <p className="page-subtitle" style={{ 
+            fontSize: "14px", 
+            color: "rgba(255,255,255,0.8)" 
           }}>Referência completa da linguagem de templates — Baseado em https://curriculox.org/tutorials</p>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "calc(100vh - 130px)" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"240px 1fr", minHeight:"calc(100vh - 130px)" }}>
         {/* Sidebar */}
-        <div style={{ borderRight: "1px solid #E0E0E0", padding: "20px 12px", background: "#F8F8F8" }}>
+        <div style={{ borderRight:"1px solid #E0E0E0", padding:"20px 12px", background:"#F8F8F8" }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => setActive(s.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: active === s.id ? "#DBEAFE" : "transparent",
-                color: active === s.id ? "#003D8F" : "#4A4A4A",
-                fontSize: 13,
-                fontWeight: active === s.id ? 600 : 400,
-                cursor: "pointer",
-                marginBottom: 2,
-                transition: "all 0.15s"
+              style={{ 
+                display:"block", 
+                width:"100%", 
+                textAlign:"left", 
+                padding:"8px 12px", 
+                borderRadius:"8px", 
+                border:"none", 
+                background: active === s.id ? "#DBEAFE" : "transparent", 
+                color: active === s.id ? "#003D8F" : "#4A4A4A", 
+                fontSize: 13, 
+                fontWeight: active === s.id ? 600 : 400, 
+                cursor: "pointer", 
+                marginBottom: 2, 
+                transition: "all 0.15s" 
               }}
             >
               {s.title}
@@ -395,7 +395,7 @@ export default function DocsPage() {
         </div>
 
         {/* Content */}
-        <div style={{ padding: "32px 40px", maxWidth: 780 }}>
+        <div style={{ padding:"32px 40px", maxWidth:780 }}>
           {SECTIONS.filter(s => s.id === active).map(s => (
             <div key={s.id}>
               <h2 style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: 20, fontWeight: 600, marginBottom: 12, color: "#1A1A1A" }}>{s.title}</h2>

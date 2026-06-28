@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
-// ⭐ Templates de exemplo com a sintaxe OFICIAL da CVQuery (conforme https://curriculox.org/tutorials)
+// ⭐ Templates de exemplo com a sintaxe OFICIAL da CVQuery 
 const INITIAL_EXAMPLES = [
   { 
     name: "Cabeçalho simples", 

@@ -4,7 +4,7 @@ import CV from '@/models/CV';
 import Template from '@/models/Template';
 import { generatePDF } from '@/services/pdfGenerator';
 import { generateHTML } from '@/services/htmlGenerator';
-// import { generateDocx } from '@/services/docxGenerator';
+import { generateDocx } from '@/services/docxGenerator';
 
 // Função auxiliar para aplicar filtros e tradução (igual à da página Exportar)
 function applyTemplateRules(originalData, template) {
@@ -96,11 +96,11 @@ export async function POST(request) {
         contentType = 'text/html';
         fileName = `${cv.name || 'cv'}.html`;
         break;
-      // case 'docx':
-      //   fileBuffer = await generateDocx(processedData, template);
-      //   contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      //   fileName = `${cv.name || 'cv'}.docx`;
-      //   break;
+      case 'docx':
+        fileBuffer = await generateDocx(processedData, template);
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        fileName = `${cv.name || 'cv'}.docx`;
+        break;
       default:
         return NextResponse.json({ error: 'Formato não suportado' }, { status: 400 });
     }

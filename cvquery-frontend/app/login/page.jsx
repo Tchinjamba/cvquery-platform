@@ -8,14 +8,14 @@ function LoginPage() {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-
+  
   const [tab, setTab] = useState(tabParam === "login" ? "login" : "register");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPass] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const API = process.env.NEXT_PUBLIC_API_URL;
+  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -112,8 +112,9 @@ function LoginPage() {
                 fontWeight: 600,
                 background: "none",
                 border: "none",
-                borderBottom: `2px solid ${tab === "register" ? "#FFFFFF" : "transparent"
-                  }`,
+                borderBottom: `2px solid ${
+                  tab === "register" ? "#FFFFFF" : "transparent"
+                }`,
                 color: tab === "register" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 transition: "all 0.15s",
@@ -133,8 +134,9 @@ function LoginPage() {
                 fontWeight: 600,
                 background: "none",
                 border: "none",
-                borderBottom: `2px solid ${tab === "login" ? "#FFFFFF" : "transparent"
-                  }`,
+                borderBottom: `2px solid ${
+                  tab === "login" ? "#FFFFFF" : "transparent"
+                }`,
                 color: tab === "login" ? "#FFFFFF" : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 transition: "all 0.15s",
@@ -284,8 +286,8 @@ function LoginPage() {
               {loading
                 ? "A processar..."
                 : tab === "login"
-                  ? "Entrar"
-                  : "Criar conta"}
+                ? "Entrar"
+                : "Criar conta"}
             </button>
           </form>
 

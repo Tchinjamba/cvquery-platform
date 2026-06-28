@@ -11,32 +11,30 @@ export default function ExamplesPage() {
       name: "Cabeçalho Básico",
       description: "Extrair informações pessoais básicas",
       icon: BookOpen,
-      query: `Nome: $$.name
-Email: $$.contact.email
-Telefone: $$.contact.phone
-Cargo: $$.jobTitle`,
+      query: `Nome: /** $.name **/
+Email: /** $.contact.email **/
+Telefone: /** $.contact.phone **/
+Cargo: /** $.jobTitle **/`,
       output: `Nome: João Silva
 Email: joao.silva@email.com
 Telefone: +351 912 345 678
 Cargo: Investigador Senior`
     },
     {
-      name: "Listar Publicações",
-      description: "Iterar sobre publicações com formatação",
+      name: "Listar Publicações (Iteração)",
+      description: "Iterar sobre publicações com formatação e ordenação",
       icon: BookOpen,
-      query: `$($$.expprof.pubs/--.length>0--/){
-Publicações ($$.expprof.pubs/--.length--/):
+      query: `Publicações (/** /-- $.expprof.pubs.pub.length --/ **/):
 
-$$.expprof.pubs.$pub{
+/** ($.expprof.pubs.$pub, [[year, DESC]]) => {
   "$pub.titleen" ($pub.year)
   Autores: $pub.authors.$author{
     first: {},
     common: { $author.surname, $author.name/--.charAt(0).toUpperCase()--/. },
     last: { $author.surname, $author.name/--.charAt(0).toUpperCase()--/. }
   }
-  Área: $pub.area\n
-}
-}`,
+  Área: $pub.area\\n
+} **/`,
       output: `Publicações (2):
 
 "Innovation of CV management" (2025)
@@ -49,16 +47,16 @@ Autores: Smith, J.
     },
     {
       name: "Formação Académica",
-      description: "Listar formação ordenada por ano",
+      description: "Listar formação ordenada por ano com descrição opcional",
       icon: GraduationCap,
       query: `Formação Académica:
 
-$$.education.$edu/--.sort((a,b) => b.year - a.year)--/{
+/** ($.education.$edu, [[year, DESC]]) => {
   • $edu.degree em $edu.institution ($edu.year)
-  $($edu.description/--!==undefined--/){
-    \ \ \ $edu.description\n
+  $( $edu.description/--!==undefined--/ ){
+    \\ $edu.description\\n
   }
-}`,
+} **/`,
       output: `Formação Académica:
 
 • Doutoramento em Informática - Universidade de Lisboa (2020)
@@ -70,21 +68,24 @@ $$.education.$edu/--.sort((a,b) => b.year - a.year)--/{
     },
     {
       name: "Experiência Profissional",
-      description: "Experiência profissional com detalhes",
+      description: "Experiência profissional com responsabilidades",
       icon: Briefcase,
       query: `Experiência Profissional:
 
-$$.experience.$exp/--.sort((a,b) => b.startDate - a.startDate)--/{
-$exp.position na $exp.company
-\ Período: $exp.startDate - $($exp.endDate/--!==undefined--/){$exp.endDate}{Presente}
-\ $($exp.responsibilities/--!==undefined--/){
-\ Responsabilidades:
-\ $exp.responsibilities.$resp{
-\ \ • $resp\n
-\ }
-}
-\n}`,
-      output: `Investigador Sénior na TechLab
+/** ($.experience.$exp, [[startDate, DESC]]) => {
+  $exp.position na $exp.company
+  \\ Período: $exp.startDate - $( $exp.endDate/--!==undefined--/ ){ $exp.endDate }{ Presente }
+  $( $exp.responsibilities/--!==undefined--/ ){
+    \\ Responsabilidades:
+    \\ $exp.responsibilities.$resp{
+      \\ \\ • $resp\\n
+    }
+  }
+  \\n
+} **/`,
+      output: `Experiência Profissional:
+
+Investigador Sénior na TechLab
   Período: 2021 - Presente
   Responsabilidades:
     • Liderar equipa de investigação
@@ -97,21 +98,21 @@ Desenvolvedor Full-Stack na InnovateX
     • Implementar APIs REST`
     },
     {
-      name: "Condicionais",
-      description: "Usar condições para mostrar conteúdo opcional",
+      name: "Condicionais e Verificações",
+      description: "Usar condições para mostrar conteúdo apenas quando existem dados",
       icon: Filter,
-      query: `$($$.expprof.pubs/--.length>0--/){
-$($$.expprof.pubs/--.length--/) publicação(ões) encontrada(s):
-$$.expprof.pubs.$pub{
-  • "$pub.titleen" ($pub.year)
-}
-}
-$($$.expprof.pubs/--.length===0--/){
-Nenhuma publicação registada.
-}
-$($$.orcid/--!==undefined--/){
-ORCID: $$.orcid
-}`,
+      query: `/** $( $.expprof.pubs/--!==undefined && $.expprof.pubs.pub.length > 0 --/ ){
+  /-- $.expprof.pubs.pub.length --/ publicação(ões) encontrada(s):
+  /** ($.expprof.pubs.$pub, [[year, DESC]]) => {
+    • "$pub.titleen" ($pub.year)\\n
+  } **/
+} **/
+/** $( $.expprof.pubs/--.length===0--/ ){
+  Nenhuma publicação registada.
+} **/
+/** $( $.orcid/--!==undefined--/ ){
+  ORCID: /** $.orcid **/
+} **/`,
       output: `2 publicação(ões) encontrada(s):
   • "Innovation of CV management" (2025)
   • "Latex converter" (2013)
@@ -119,22 +120,22 @@ ORCID: $$.orcid
 ORCID: 0000-0000-0000-0000`
     },
     {
-      name: "Filtros Avançados",
-      description: "Filtrar publicações por ano",
+      name: "Filtros Avançados com JS",
+      description: "Filtrar publicações por ano usando JavaScript embutido",
       icon: Filter,
       query: `Publicações recentes (após 2020):
 
-$$.expprof.pubs.$pub/--.filter(p => p.year > 2020)--/{
-$pub.titleen ($pub.year)
-}
+/** ($.expprof.pubs.$pub/--.filter(p => p.year > 2020)--/, [[year, DESC]]) => {
+  $pub.titleen ($pub.year)\\n
+} **/
 
 Publicações mais antigas (2020 ou anterior):
 
-$($$.expprof.pubs/--.filter(p => p.year <= 2020).length > 0--/){
-$$.expprof.pubs.$pub/--.filter(p => p.year <= 2020)--/{
-$pub.titleen ($pub.year)
-}
-}`,
+/** $( $.expprof.pubs/--.filter(p => p.year <= 2020).length > 0 --/ ){
+  /** ($.expprof.pubs.$pub/--.filter(p => p.year <= 2020)--/, [[year, DESC]]) => {
+    $pub.titleen ($pub.year)\\n
+  } **/
+} **/`,
       output: `Publicações recentes (após 2020):
 "Innovation of CV management" (2025)
 
@@ -143,21 +144,43 @@ Publicações mais antigas (2020 ou anterior):
     },
     {
       name: "Multi-idioma",
-      description: "Suporte para múltiplos idiomas",
+      description: "Suporte para múltiplos idiomas com base na variável 'lang'",
       icon: Globe,
-      query: `$($$.expprof.pubs.$pub{
-  $($$.lang/--==="pt"--/){
-  Título: "$pub.titlept", $pub.year
+      query: `/** ($.expprof.pubs.$pub, [[year, DESC]]) => {
+  $( /-- $.lang === "pt" --/ ){
+    Título: "$pub.titlept", $pub.year\\n
   }
-  $($$.lang/--==="en"--/){
-  Title: "$pub.titleen", $pub.year
+  $( /-- $.lang === "en" --/ ){
+    Title: "$pub.titleen", $pub.year\\n
   }
-  $($$.lang/--==="es"--/){
-  Título: "$pub.titles", $pub.year
+  $( /-- $.lang === "es" --/ ){
+    Título: "$pub.titles", $pub.year\\n
   }
-}\n)`,
+} **/`,
       output: `Título: "Inovação na gestão de CV", 2025
 Título: "Converter LaTeX", 2013`
+    },
+    {
+      name: "Blocos first/common/last",
+      description: "Tratar o primeiro, os comuns e o último registo de forma diferente",
+      icon: BookOpen,
+      query: `Lista de publicações:
+
+/** $.expprof.pubs.$pub{
+  first: { "▶ $pub.titleen ($pub.year)\\n" }
+  common: { "  $pub.titleen ($pub.year)\\n" }
+  last: { "  $pub.titleen ($pub.year) ◀\\n" }
+} **/`,
+      output: `Lista de publicações:
+▶ "Innovation of CV management" (2025)
+  "Latex converter" (2013) ◀`
+    },
+    {
+      name: "Espaços e Quebras Literais",
+      description: "Controlo preciso de espaços e novas linhas usando \\ e \\n",
+      icon: Code2,
+      query: `/** "\\"$pub.title\\":\\ $pub.year\\n" **/`,
+      output: `"Innovation of CV management": 2025`
     }
   ];
 
@@ -170,10 +193,15 @@ Título: "Converter LaTeX", 2013`
     <div style={{ padding: 32, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, color: "#1f2937" }}>Exemplos Práticos</h1>
-        <p style={{ fontSize: 16, color: "#6b7280" }}>Exemplos de queries CV Query Language para diferentes situações</p>
+        <p style={{ fontSize: 16, color: "#6b7280" }}>
+          Exemplos de templates CVQuery com a sintaxe oficial — baseados em{' '}
+          <a href="https://curriculox.org/tutorials" target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6", textDecoration: "none" }}>
+            curriculox.org/tutorials
+          </a>
+        </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
         {/* Sidebar de exemplos */}
         <div style={{ 
           border: "1px solid #bfdbfe", 
@@ -230,7 +258,10 @@ Título: "Converter LaTeX", 2013`
           }}>
             <div style={{ padding: "12px 16px", background: "#eff6ff", borderBottom: "1px solid #bfdbfe", display: "flex", alignItems: "center", gap: 8 }}>
               <Code2 size={16} color="#3b82f6" />
-              <strong style={{ color: "#1f2937" }}>Query</strong>
+              <strong style={{ color: "#1f2937" }}>Template CVQuery</strong>
+              <span style={{ marginLeft: "auto", fontSize: 12, color: "#6b7280" }}>
+                Use <code style={{ background: "#dbeafe", padding: "2px 6px", borderRadius: 4 }}>/** ... **/</code> para expressões
+              </span>
             </div>
             <pre style={{ 
               margin: 0, 
@@ -239,7 +270,7 @@ Título: "Converter LaTeX", 2013`
               color: "#d4d4d4",
               fontFamily: "monospace",
               fontSize: 13,
-              lineHeight: 1.5,
+              lineHeight: 1.6,
               overflow: "auto"
             }}>
               {examples[selectedExample].query}
@@ -254,7 +285,7 @@ Título: "Converter LaTeX", 2013`
           }}>
             <div style={{ padding: "12px 16px", background: "#eff6ff", borderBottom: "1px solid #bfdbfe", display: "flex", alignItems: "center", gap: 8 }}>
               <Download size={16} color="#3b82f6" />
-              <strong style={{ color: "#1f2937" }}>Output</strong>
+              <strong style={{ color: "#1f2937" }}>Output Gerado</strong>
             </div>
             <pre style={{ 
               margin: 0, 
@@ -263,7 +294,7 @@ Título: "Converter LaTeX", 2013`
               color: "#1f2937",
               fontFamily: "monospace",
               fontSize: 13,
-              lineHeight: 1.5,
+              lineHeight: 1.6,
               overflow: "auto"
             }}>
               {examples[selectedExample].output}
@@ -283,7 +314,7 @@ Título: "Converter LaTeX", 2013`
           }}>
             <span>💡</span>
             <span>
-              <strong>Dica:</strong> Pode copiar estas queries e adaptá-las ao seu próprio CV.
+              <strong>Dica:</strong> Pode copiar estes exemplos e adaptá-los ao seu próprio CV.
               Experimente no <Link href="/template-editor" style={{ color: "#3b82f6", textDecoration: "none" }}>Editor de Templates</Link>!
             </span>
           </div>

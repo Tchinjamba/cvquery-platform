@@ -167,44 +167,44 @@ const Handlebars = require('handlebars');
  * @param {string} format   - "html" | "latex" | "markdown" | "text"
  * @returns {string}        - Template processado
  */
-function processWithHandlebars(cvData, template, format = 'text') {
-  // Deteta se é Handlebars: contém {{#...}} ou {{...}} mas não é CVQuery ($.)
-  const hasHandlebarsBlocks = /\{\{#/.test(template) || /\{\{[\w.]+(\}\})?/.test(template);
-  const hasCVQuerySyntax = /\$\./.test(template) || /\(\s*\$/.test(template);
+/**
+ * Strip the `$.` prefix that the template editor adds to Handlebars paths.
+ * {{#each $.experience}} → {{#each experience}}
+ * {{#if $.field}}        → {{#if field}}
+ * {{$.contact.email}}   → {{contact.email}}
+ * This makes the hybrid syntax the editor produces valid for the Handlebars engine.
+ */
+function normalizeHandlebarsTemplate(template) {
+  return template
+    .replace(/\{\{#each\s+\$\.([\w.]+)\}\}/g, '{{#each $1}}')
+    .replace(/\{\{#if\s+\$\.([\w.]+)\}\}/g,   '{{#if $1}}')
+    .replace(/\{\{\$\.([\w.]+)\}\}/g,           '{{$1}}');
+}
 
-  // Se é CVQuery e não Handlebars, usa o processador original
+function processWithHandlebars(cvData, template, format = 'text') {
+  const hasHandlebarsBlocks = /\{\{[#/]/.test(template);
+  const hasCVQuerySyntax    = /\$\./.test(template) || /\(\s*\$/.test(template);
+
+  // Pure CVQuery syntax (no Handlebars block tags) — use CVQuery processor
   if (hasCVQuerySyntax && !hasHandlebarsBlocks) {
     return processCV(cvData, template, format);
   }
 
-  // Se é Handlebars, processa com Handlebars
+  // Handlebars (with or without $.  prefixes) — normalize then compile
   if (hasHandlebarsBlocks) {
     try {
-      const compiled = Handlebars.compile(template);
-      const result = compiled(cvData);
-
-      // Pós-processamento conforme formato
-      switch (format.toLowerCase()) {
-        case 'latex':
-          return result;
-        case 'markdown':
-          return result;
-        case 'html':
-          return result;
-        case 'text':
-          // Remove tags HTML para texto puro
-          return result.replace(/<[^>]*>/g, '');
-        default:
-          return result;
-      }
+      const normalized = normalizeHandlebarsTemplate(template);
+      const compiled   = Handlebars.compile(normalized);
+      const result     = compiled(cvData);
+      return format.toLowerCase() === 'text'
+        ? result.replace(/<[^>]*>/g, '')
+        : result;
     } catch (err) {
       console.error('Erro Handlebars:', err.message);
-      // Fallback para processCV se Handlebars falhar
       return processCV(cvData, template, format);
     }
   }
 
-  // Se não é Handlebars nem CVQuery, trata como template literal com substituição simples
   return processCV(cvData, template, format);
 }
 

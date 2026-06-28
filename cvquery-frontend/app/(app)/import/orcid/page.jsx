@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function ImportOrcid() {
+function ImportOrcidPage() {
   const { api } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,7 +32,7 @@ export default function ImportOrcid() {
     setMessage("");
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL;
       const token = localStorage.getItem("cvquery_token");
       
       const response = await fetch(`${API_URL}/api/orcid/auth`, {
@@ -277,5 +277,13 @@ export default function ImportOrcid() {
         )}
       </div>
     </>
+  );
+}
+
+export default function ImportOrcid() {
+  return (
+    <Suspense>
+      <ImportOrcidPage />
+    </Suspense>
   );
 }

@@ -1,107 +1,6 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-
-// ============================================================
-// 📄 COMPONENTE PRINCIPAL
-// ============================================================
-const pdfStyles = StyleSheet.create({
-  page: {
-    padding: 30,
-    fontFamily: 'Helvetica',
-    fontSize: 9,
-    lineHeight: 1.3,
-    backgroundColor: '#ffffff'
-  },
-  header: { marginBottom: 12, textAlign: 'center' },
-  logo: { fontSize: 18, fontWeight: 'bold', color: '#003D8F', marginBottom: 8, letterSpacing: 3 },
-  personalInfo: { marginBottom: 12, padding: 10, backgroundColor: '#F5F5F5', borderRadius: 4 },
-  personalInfoTitle: { fontSize: 9, fontWeight: 'bold', color: '#003D8F', marginBottom: 4 },
-  personalInfoRow: { fontSize: 8, color: '#333', marginBottom: 2, flexDirection: 'row' },
-  personalInfoLabel: { fontWeight: 'bold', width: 70 },
-  personalInfoValue: { flex: 1 },
-  section: { marginBottom: 10 },
-  sectionTitle: { fontSize: 10, fontWeight: 'bold', borderBottomWidth: 1, borderBottomColor: '#003D8F', paddingBottom: 3, marginBottom: 6, color: '#003D8F' },
-  itemTitle: { fontSize: 9, fontWeight: 'bold', marginBottom: 2, color: '#1A1A1A' },
-  itemPeriod: { fontSize: 8, color: '#999', marginBottom: 2 },
-  itemDescription: { fontSize: 8, marginBottom: 4, textAlign: 'justify', color: '#333' },
-  skillsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
-  skillItem: { fontSize: 7, padding: '2 6', backgroundColor: '#F5F5F5', borderRadius: 3, marginRight: 4, marginBottom: 3, color: '#333' },
-});
-
-const PDFDocument = ({ cvData }) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      <View style={pdfStyles.header}>
-        <Text style={pdfStyles.logo}>CVQuery</Text>
-      </View>
-      <View style={pdfStyles.personalInfo}>
-        <Text style={pdfStyles.personalInfoTitle}>INFORMAÇÕES PESSOAIS</Text>
-        <View style={pdfStyles.personalInfoRow}>
-          <Text style={pdfStyles.personalInfoLabel}>Nome:</Text>
-          <Text style={pdfStyles.personalInfoValue}>{cvData?.name || "—"}</Text>
-        </View>
-        <View style={pdfStyles.personalInfoRow}>
-          <Text style={pdfStyles.personalInfoLabel}>Email:</Text>
-          <Text style={pdfStyles.personalInfoValue}>{cvData?.contact?.email || "—"}</Text>
-        </View>
-        <View style={pdfStyles.personalInfoRow}>
-          <Text style={pdfStyles.personalInfoLabel}>Telefone:</Text>
-          <Text style={pdfStyles.personalInfoValue}>{cvData?.contact?.phone || "—"}</Text>
-        </View>
-        <View style={pdfStyles.personalInfoRow}>
-          <Text style={pdfStyles.personalInfoLabel}>Localização:</Text>
-          <Text style={pdfStyles.personalInfoValue}>{cvData?.contact?.location || "—"}</Text>
-        </View>
-        {cvData?.course && (
-          <View style={pdfStyles.personalInfoRow}>
-            <Text style={pdfStyles.personalInfoLabel}>Estado:</Text>
-            <Text style={pdfStyles.personalInfoValue}>{cvData.course}</Text>
-          </View>
-        )}
-      </View>
-      {cvData?.objective && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Objetivo</Text>
-          <Text style={pdfStyles.itemDescription}>{cvData.objective}</Text>
-        </View>
-      )}
-      {cvData?.experience?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Experiência Profissional</Text>
-          {cvData.experience.map((exp, idx) => (
-            <View key={idx} style={{ marginBottom: 6 }}>
-              <Text style={pdfStyles.itemTitle}>{exp.title} | {exp.company}</Text>
-              <Text style={pdfStyles.itemPeriod}>{exp.period}{exp.location ? `  |  ${exp.location}` : ""}</Text>
-              <Text style={pdfStyles.itemDescription}>{exp.description}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-      {cvData?.education?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Formação Académica</Text>
-          {cvData.education.map((edu, idx) => (
-            <View key={idx} style={{ marginBottom: 6 }}>
-              <Text style={pdfStyles.itemTitle}>{edu.degree}</Text>
-              <Text style={pdfStyles.itemPeriod}>{edu.institution}{edu.period ? `  |  ${edu.period}` : ""}</Text>
-              <Text style={pdfStyles.itemDescription}>{edu.description}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-      {cvData?.skills?.length > 0 && (
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.sectionTitle}>Competências</Text>
-          <View style={pdfStyles.skillsContainer}>
-            {cvData.skills.map((skill, idx) => <Text key={idx} style={pdfStyles.skillItem}>{skill}</Text>)}
-          </View>
-        </View>
-      )}
-    </Page>
-  </Document>
-);
 
 export default function ExportPage() {
   const { api } = useAuth();
@@ -112,23 +11,22 @@ export default function ExportPage() {
   const [cvData, setCvData] = useState({});
   const [jsonText, setJsonText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(null); // current export format
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [processedOutput, setProcessedOutput] = useState("");
   const [outputFormat, setOutputFormat] = useState("text");
   const [showOutput, setShowOutput] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
       const [cvsRes, templatesRes] = await Promise.all([
         api("/api/cv"),
-        api("/api/templates")
+        api("/api/templates"),
       ]);
-      const cvsData = await cvsRes.json();
+      const cvsData      = await cvsRes.json();
       const templatesData = await templatesRes.json();
       setCvs(Array.isArray(cvsData) ? cvsData : []);
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
@@ -137,11 +35,9 @@ export default function ExportPage() {
         setCvData(cvsData[0].data || {});
         setJsonText(JSON.stringify(cvsData[0].data || {}, null, 2));
       }
-      if (templatesData.length > 0) {
-        setSelectedTemplate(templatesData[0]);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      if (templatesData.length > 0) setSelectedTemplate(templatesData[0]);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
     } finally {
       setLoading(false);
     }
@@ -166,8 +62,7 @@ export default function ExportPage() {
     const text = e.target.value;
     setJsonText(text);
     try {
-      const parsed = JSON.parse(text);
-      setCvData(parsed);
+      setCvData(JSON.parse(text));
       setError("");
       setProcessedOutput("");
       setShowOutput(false);
@@ -182,8 +77,8 @@ export default function ExportPage() {
     setError("");
     try {
       const res = await api(`/api/cv/${selectedCV._id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ data: cvData })
+        method: "PUT",
+        body: JSON.stringify({ data: cvData }),
       });
       if (!res.ok) throw new Error("Erro ao guardar");
       alert("CV guardado com sucesso!");
@@ -195,22 +90,16 @@ export default function ExportPage() {
   };
 
   const handleProcess = async () => {
-    if (!selectedTemplate) {
-      setError("Selecione um template");
-      return;
-    }
-    if (!selectedCV) {
-      setError("Selecione um CV");
-      return;
-    }
+    if (!selectedTemplate) { setError("Selecione um template"); return; }
+    if (!selectedCV)       { setError("Selecione um CV"); return; }
     try {
       const res = await api("/api/cv/process", {
         method: "POST",
         body: JSON.stringify({
           templateId: selectedTemplate._id,
-          cvId: selectedCV._id,
-          format: outputFormat
-        })
+          cvId:       selectedCV._id,
+          format:     outputFormat,
+        }),
       });
       if (!res.ok) throw new Error("Erro ao processar template");
       const json = await res.json();
@@ -222,113 +111,134 @@ export default function ExportPage() {
     }
   };
 
-  const downloadFile = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
+  // Download a blob response from the backend
+  const downloadBlob = (blob, filename) => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a   = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const exportWithPipeline = async (format) => {
-    if (!selectedTemplate) {
-      setError("Selecione um template");
-      return;
-    }
-    if (!selectedCV) {
-      setError("Selecione um CV");
-      return;
-    }
+  // Download a text string
+  const downloadText = (content, filename, mime) => {
+    downloadBlob(new Blob([content], { type: mime }), filename);
+  };
+
+  // All format exports (html, pdf, docx, latex) go through the backend export API.
+  // The backend processes the template, builds styled HTML, then converts as needed.
+  const exportFormat = async (format) => {
+    if (!selectedTemplate) { setError("Selecione um template"); return; }
+    if (!selectedCV)       { setError("Selecione um CV"); return; }
+
+    setExporting(format);
+    setError("");
     try {
-      const res = await api("/api/cv/process", {
+      const res = await api(`/api/export/${format}`, {
         method: "POST",
-        body: JSON.stringify({
-          templateId: selectedTemplate._id,
-          cvId: selectedCV._id,
-          format
-        })
+        body: JSON.stringify({ cvId: selectedCV._id, templateId: selectedTemplate._id }),
       });
-      if (!res.ok) throw new Error("Erro ao exportar");
-      const json = await res.json();
-      const ext = format === 'html' ? 'html' : format === 'markdown' ? 'md' : 'txt';
-      const mime = format === 'html' ? 'text/html' : format === 'markdown' ? 'text/markdown' : 'text/plain';
-      downloadFile(json.output, `${selectedCV?.name || "cv"}.${ext}`, mime);
-      setError("");
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || `Erro ao exportar ${format.toUpperCase()}`);
+      }
+      const blob = await res.blob();
+      const ext  = format === "latex" ? "tex" : format;
+      downloadBlob(blob, `${selectedCV.name || "cv"}.${ext}`);
     } catch (err) {
-      setError("Erro ao exportar: " + err.message);
+      setError(err.message);
+    } finally {
+      setExporting(null);
     }
   };
 
   const exportJSON = () => {
-    downloadFile(JSON.stringify(cvData, null, 2), `${selectedCV?.name || "cv"}.json`, "application/json");
+    downloadText(
+      JSON.stringify(cvData, null, 2),
+      `${selectedCV?.name || "cv"}.json`,
+      "application/json"
+    );
   };
 
-  if (loading) {
-    return <div style={{ padding: 32, textAlign: "center" }}>A carregar...</div>;
-  }
+  if (loading) return <div style={{ padding: 32, textAlign: "center" }}>A carregar...</div>;
 
   return (
     <>
-      <div className="page-header" style={{
+      <div style={{
         background: "#003D8F",
         borderBottom: "1px solid #1E40AF",
-        padding: "24px 32px 16px 32px"
+        padding: "24px 32px 16px 32px",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 className="page-title" style={{ fontSize: "24px", fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>Exportar CV</h1>
-            <p className="page-subtitle" style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)" }}>Processador CVQuery - Parse → Bind → Render</p>
+            <h1 style={{ fontSize: 24, fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>Exportar CV</h1>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>CVQuery Pipeline — HTML → PDF / DOCX / LaTeX</p>
           </div>
-          <button onClick={handleSave} disabled={saving} style={{ padding: "8px 20px", background: "#FFFFFF", color: "#003D8F", border: "none", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}>
+          <button onClick={handleSave} disabled={saving} style={btnStyle("#FFFFFF", "#003D8F")}>
             {saving ? "A guardar..." : "💾 Guardar alterações"}
           </button>
         </div>
       </div>
 
       <div style={{ padding: "24px 32px", maxWidth: 1400, margin: "0 auto" }}>
-        {error && <div style={{ marginBottom: 16, padding: 12, background: "#fee2e2", color: "#dc2626", borderRadius: 8 }}>❌ {error}</div>}
+        {error && (
+          <div style={{ marginBottom: 16, padding: 12, background: "#fee2e2", color: "#dc2626", borderRadius: 8 }}>
+            ❌ {error}
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 1fr", gap: 24 }}>
-          {/* Sidebar CVs */}
+
+          {/* ── CV list ── */}
           <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 16px", background: "#F5F5F5", borderBottom: "1px solid #E0E0E0", fontWeight: 600, color: "#1A1A1A" }}>Meus CVs</div>
+            <div style={{ padding: "12px 16px", background: "#F5F5F5", borderBottom: "1px solid #E0E0E0", fontWeight: 600 }}>
+              Meus CVs
+            </div>
             <div style={{ maxHeight: "calc(100vh - 250px)", overflowY: "auto" }}>
               {cvs.map(cv => (
-                <button key={cv._id} onClick={() => handleSelectCV(cv)} style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", border: "none", background: selectedCV?._id === cv._id ? "#DBEAFE" : "transparent", cursor: "pointer", borderBottom: "1px solid #F0F0F0" }}>
-                  <div style={{ fontWeight: selectedCV?._id === cv._id ? 600 : 400, color: "#1A1A1A" }}>{cv.name}</div>
+                <button
+                  key={cv._id}
+                  onClick={() => handleSelectCV(cv)}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "12px 16px", border: "none",
+                    background: selectedCV?._id === cv._id ? "#DBEAFE" : "transparent",
+                    cursor: "pointer", borderBottom: "1px solid #F0F0F0",
+                  }}
+                >
+                  <div style={{ fontWeight: selectedCV?._id === cv._id ? 600 : 400 }}>{cv.name}</div>
                   <div style={{ fontSize: 11, color: "#999" }}>{new Date(cv.updatedAt).toLocaleDateString()}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Editor JSON + Template */}
+          {/* ── JSON editor + template selector ── */}
           <div>
             <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>📝 Dados do CV (JSON)</h3>
-              <p style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Dados que serão injetados no template</p>
-              <textarea value={jsonText} onChange={handleJsonChange} rows={10} style={{ width: "100%", fontFamily: "monospace", fontSize: 12, padding: 12, border: "1px solid #E0E0E0", borderRadius: 8 }} />
+              <h3 style={{ marginBottom: 8, color: "#1A1A1A" }}>📝 Dados do CV (JSON)</h3>
+              <p style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Dados injectados no template</p>
+              <textarea
+                value={jsonText}
+                onChange={handleJsonChange}
+                rows={10}
+                style={{ width: "100%", fontFamily: "monospace", fontSize: 12, padding: 12, border: "1px solid #E0E0E0", borderRadius: 8 }}
+              />
             </div>
 
             <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>📋 Template CVQuery</h3>
               <select
                 value={selectedTemplate?._id || ""}
-                onChange={(e) => {
-                  const template = templates.find(t => t._id === e.target.value);
-                  handleSelectTemplate(template);
-                }}
+                onChange={(e) => handleSelectTemplate(templates.find(t => t._id === e.target.value))}
                 style={{ width: "100%", padding: 10, border: "1px solid #E0E0E0", borderRadius: 6, marginBottom: 12 }}
               >
                 {templates.length === 0 && <option value="">Nenhum template disponível</option>}
-                {templates.map(t => (
-                  <option key={t._id} value={t._id}>{t.name}</option>
-                ))}
+                {templates.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
               </select>
 
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 8 }}>
                 <select
                   value={outputFormat}
                   onChange={(e) => setOutputFormat(e.target.value)}
@@ -347,18 +257,8 @@ export default function ExportPage() {
               </div>
 
               {selectedTemplate && (
-                <div style={{ padding: 12, background: "#F5F5F5", borderRadius: 6, fontSize: 12, marginTop: 12 }}>
+                <div style={{ padding: 10, background: "#F5F5F5", borderRadius: 6, fontSize: 12, marginTop: 12 }}>
                   <strong>Template:</strong> {selectedTemplate.name}
-                  {selectedTemplate.templateType && (
-                    <span style={{ marginLeft: 12, background: "#003D8F", color: "#fff", padding: "2px 10px", borderRadius: 12 }}>
-                      {selectedTemplate.templateType}
-                    </span>
-                  )}
-                  {selectedTemplate.language && (
-                    <span style={{ marginLeft: 8, background: "#6B7280", color: "#fff", padding: "2px 10px", borderRadius: 12 }}>
-                      {selectedTemplate.language}
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -366,64 +266,58 @@ export default function ExportPage() {
                 <div style={{ marginTop: 12 }}>
                   <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>📄 Output processado:</div>
                   <div style={{
-                    background: "#F5F5F5",
-                    borderRadius: 6,
-                    padding: 12,
-                    maxHeight: 300,
-                    overflow: "auto",
+                    background: "#F5F5F5", borderRadius: 6, padding: 12,
+                    maxHeight: 300, overflow: "auto",
                     fontFamily: outputFormat === "html" ? "inherit" : "monospace",
                     fontSize: outputFormat === "html" ? "inherit" : 11,
-                    whiteSpace: outputFormat === "html" ? "normal" : "pre-wrap"
+                    whiteSpace: outputFormat === "html" ? "normal" : "pre-wrap",
                   }}>
-                    {outputFormat === "html" ? (
-                      <div dangerouslySetInnerHTML={{ __html: processedOutput }} />
-                    ) : (
-                      processedOutput || "Clique em 'Processar' para ver o resultado..."
-                    )}
+                    {outputFormat === "html"
+                      ? <div dangerouslySetInnerHTML={{ __html: processedOutput }} />
+                      : processedOutput || "Clique em 'Processar' para ver o resultado..."}
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Botões de Exportação */}
+          {/* ── Export buttons + CV summary ── */}
           <div>
             <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ marginBottom: 16, color: "#1A1A1A" }}>📤 Exportar</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button onClick={() => exportWithPipeline('html')} style={buttonStyle("#003D8F")}>🌐 HTML</button>
-                <button onClick={() => exportWithPipeline('text')} style={buttonStyle("#4A4A4A")}>📝 Texto</button>
-                <button onClick={() => exportWithPipeline('markdown')} style={buttonStyle("#6B7280")}>📊 Markdown</button>
-                <button onClick={exportJSON} style={buttonStyle("#003D8F")}>🔧 JSON</button>
-                {/* 🆕 PDF com dados processados */}
-                <PDFDownloadLink
-                  document={<PDFDocument cvData={cvData} />}
-                  fileName={`${selectedCV?.name || "cv"}.pdf`}
-                  style={{ textDecoration: "none", gridColumn: "span 2" }}
+                <ExportBtn label="🌐 HTML"   format="html"  exporting={exporting} onClick={() => exportFormat("html")} />
+                <ExportBtn label="📑 PDF"    format="pdf"   exporting={exporting} onClick={() => exportFormat("pdf")} />
+                <ExportBtn label="📄 DOCX"   format="docx"  exporting={exporting} onClick={() => exportFormat("docx")} />
+                <ExportBtn label="🔬 LaTeX"  format="latex" exporting={exporting} onClick={() => exportFormat("latex")} />
+                <button
+                  onClick={exportJSON}
+                  style={{ ...exportBtnStyle("#4A4A4A"), gridColumn: "span 2" }}
                 >
-                  {({ loading }) => (
-                    <button style={{ ...buttonStyle("#003D8F", loading), width: "100%" }} disabled={loading}>
-                      📑 {loading ? "A gerar PDF..." : "Exportar PDF"}
-                    </button>
-                  )}
-                </PDFDownloadLink>
+                  🔧 JSON (dados brutos)
+                </button>
               </div>
               {!selectedTemplate && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#999", textAlign: "center" }}>
+                <p style={{ marginTop: 12, fontSize: 12, color: "#999", textAlign: "center" }}>
                   ⚠️ Selecione um template para exportar
-                </div>
+                </p>
               )}
             </div>
 
-            {/* Resumo do CV */}
             <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>👤 Resumo do CV</h3>
-              <div style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A4A" }}>
+              <div style={{ fontSize: 13, lineHeight: 1.7, color: "#4A4A4A" }}>
                 <p><strong>Nome:</strong> {cvData?.name || "—"}</p>
                 <p><strong>Email:</strong> {cvData?.contact?.email || "—"}</p>
                 <p><strong>Experiências:</strong> {cvData?.experience?.length || 0}</p>
                 <p><strong>Educação:</strong> {cvData?.education?.length || 0}</p>
                 <p><strong>Competências:</strong> {cvData?.skills?.length || 0}</p>
+                {cvData?.languages?.length > 0 && (
+                  <p><strong>Idiomas:</strong> {cvData.languages.length}</p>
+                )}
+                {cvData?.certifications?.length > 0 && (
+                  <p><strong>Certificações:</strong> {cvData.certifications.length}</p>
+                )}
               </div>
             </div>
           </div>
@@ -431,9 +325,8 @@ export default function ExportPage() {
 
         <div style={{ marginTop: 32, padding: 16, background: "#F5F5F5", borderRadius: 8, fontSize: 13, color: "#666" }}>
           <h4 style={{ color: "#1A1A1A", marginBottom: 4 }}>⚡ CVQuery Pipeline</h4>
-          <p><strong>Parse → Bind → Render</strong></p>
           <p style={{ fontSize: 12, marginTop: 4 }}>
-            {`A sintaxe CVQuery suporta acesso a campos ($.nome), iteração (($.array.$item) => { ... }) e expressões dinâmicas (/-- expr --/). O processamento é feito pelo backend.`}
+            O template é processado pelo backend (CVQuery processor) e o HTML resultante é usado como fonte única para PDF (Puppeteer), DOCX (html-to-docx) e LaTeX.
           </p>
         </div>
       </div>
@@ -441,15 +334,38 @@ export default function ExportPage() {
   );
 }
 
-const buttonStyle = (bgColor, disabled = false) => ({
+function ExportBtn({ label, format, exporting, onClick }) {
+  const isLoading = exporting === format;
+  return (
+    <button
+      onClick={onClick}
+      disabled={!!exporting}
+      style={exportBtnStyle("#003D8F", !!exporting)}
+    >
+      {isLoading ? "A exportar..." : label}
+    </button>
+  );
+}
+
+const exportBtnStyle = (bg, disabled = false) => ({
   padding: "10px 14px",
-  background: disabled ? "#ccc" : bgColor,
+  background: disabled ? "#ccc" : bg,
   color: "white",
   border: "none",
   borderRadius: 6,
   cursor: disabled ? "not-allowed" : "pointer",
   fontSize: 13,
   fontWeight: 500,
-  transition: "all 0.2s",
-  width: "100%"
+  width: "100%",
+  transition: "background 0.2s",
+});
+
+const btnStyle = (bg, color) => ({
+  padding: "8px 20px",
+  background: bg,
+  color: color,
+  border: "none",
+  borderRadius: 8,
+  fontWeight: 500,
+  cursor: "pointer",
 });

@@ -1,6 +1,6 @@
 const CV = require('../models/CV');
 const Template = require('../models/Template');
-const { processCV: runProcessor } = require('../services/cvqueryProcessor');
+const { processWithHandlebars: runProcessor } = require('../services/cvqueryProcessor');
 
 async function createCV(req, res) {
   const { name, data } = req.body;

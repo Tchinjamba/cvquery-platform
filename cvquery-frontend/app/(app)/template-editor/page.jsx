@@ -1,216 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import Link from "next/link";
-
-// ⭐ Templates de exemplo com a sintaxe OFICIAL da CVQuery 
-const INITIAL_EXAMPLES = [
-  {
-    name: "Cabeçalho simples",
-    body: `Nome: /** $.name **/
-Email: /** $.contact.email **/
-Telefone: /** $.contact.phone **/`
-  },
-  {
-    name: "Profissional (oficial)",
-    body: `/** $.name **/
-
-/** $.contact.email **/  /** $.contact.phone **/
-
-/** $( $.experience/--!==undefined && $.experience.length > 0 --/ ){
-  Experiência Profissional:
-  /** ($.experience.$exp, [[startDate, DESC]]) => {
-    $exp.position na $exp.company
-    Período: $exp.startDate - $( $exp.endDate/--!==undefined--/ ){ $exp.endDate }{ Presente }
-    $( $exp.responsibilities/--!==undefined--/ ){
-      Responsabilidades:
-      $exp.responsibilities.$resp{
-        • $resp\\n
-      }
-    }
-    \\n
-  } **/
-} **/
-
-/** $( $.skills/--!==undefined && $.skills.length > 0 --/ ){
-  Competências:
-  /** ($.skills.$skill) => {
-    • $skill\\n
-  } **/
-} **/`
-  },
-  {
-    name: "Académico (oficial)",
-    body: `/** $.name **/
-
-/** $.contact.email **/  /** $.contact.phone **/
-ORCID: /** $.orcid **/
-
-/** $( $.publications/--!==undefined && $.publications.length > 0 --/ ){
-  Publicações:
-  /** ($.publications.$pub, [[year, DESC]]) => {
-    • "$pub.title" ($pub.year) - $pub.journal\\n
-  } **/
-} **/
-
-/** $( $.education/--!==undefined && $.education.length > 0 --/ ){
-  Formação Académica:
-  /** ($.education.$edu, [[year, DESC]]) => {
-    • $edu.degree em $edu.institution ($edu.year)\\n
-  } **/
-} **/`
-  },
-  {
-    name: "Completo (oficial)",
-    body: `=== /** $.name **/ ===
-Email: /** $.contact.email **/
-Telefone: /** $.contact.phone **/
-
-/** $( $.objective/--!==undefined --/ ){
-  Objetivo:
-  /** $.objective **/
-} **/
-
-/** $( $.experience/--!==undefined && $.experience.length > 0 --/ ){
-  Experiência Profissional:
-  /** ($.experience.$exp, [[startDate, DESC]]) => {
-    $exp.position na $exp.company
-    Período: $exp.startDate - $( $exp.endDate/--!==undefined--/ ){ $exp.endDate }{ Presente }
-    $( $exp.responsibilities/--!==undefined--/ ){
-      Responsabilidades:
-      $exp.responsibilities.$resp{
-        • $resp\\n
-      }
-    }
-    \\n
-  } **/
-} **/
-
-/** $( $.education/--!==undefined && $.education.length > 0 --/ ){
-  Formação Académica:
-  /** ($.education.$edu, [[year, DESC]]) => {
-    • $edu.degree em $edu.institution ($edu.year)\\n
-  } **/
-} **/
-
-/** $( $.publications/--!==undefined && $.publications.length > 0 --/ ){
-  Publicações:
-  /** ($.publications.$pub, [[year, DESC]]) => {
-    • "$pub.title" ($pub.year) - $pub.journal\\n
-  } **/
-} **/
-
-/** $( $.skills/--!==undefined && $.skills.length > 0 --/ ){
-  Competências:
-  /** ($.skills.$skill) => {
-    • $skill\\n
-  } **/
-} **/
-
-/** $( $.languages/--!==undefined && $.languages.length > 0 --/ ){
-  Idiomas:
-  /** ($.languages.$lang) => {
-    • $lang.name - $lang.level\\n
-  } **/
-} **/
-
-/** $( $.certifications/--!==undefined && $.certifications.length > 0 --/ ){
-  Certificados:
-  /** ($.certifications.$cert) => {
-    • $cert.title - $cert.institution ($cert.date)\\n
-  } **/
-} **/`
-  }
-];
-
-// ⭐ Funções auxiliares para processar templates no frontend
-function getNestedValue(obj, path) {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined ? current[key] : undefined;
-  }, obj);
-}
-
-function processEachBlocks(template, data) {
-  const eachRegex = /\{\{#each \$\.([\w.]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
-
-  return template.replace(eachRegex, (match, arrayPath, blockContent) => {
-    const array = getNestedValue(data, arrayPath);
-
-    if (!Array.isArray(array)) {
-      return '';
-    }
-
-    return array.map(item => {
-      let processedBlock = blockContent;
-
-      if (typeof item === 'string' || typeof item === 'number') {
-        processedBlock = processedBlock.replace(/\{\{\.\}\}/g, String(item));
-      }
-
-      if (typeof item === 'object' && item !== null) {
-        processedBlock = processedBlock.replace(/\{\{(\w+)\}\}/g, (m, key) => {
-          return item[key] !== undefined ? String(item[key]) : '';
-        });
-      }
-
-      return processedBlock;
-    }).join('');
-  });
-}
-
-function processTemplate(template, cvData) {
-  let result = template;
-
-  result = processEachBlocks(result, cvData);
-
-  result = result.replace(/\{\{\$\.([\w.]+)\}\}/g, (match, path) => {
-    const value = getNestedValue(cvData, path);
-    return value !== undefined ? String(value) : '';
-  });
-
-  return result;
-}
-
-function markdownToHtml(markdown) {
-  // função inalterada
-  let html = markdown;
-  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: 600; margin: 16px 0 8px 0; color: #1a1a1a;">$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 18px; font-weight: 600; margin: 20px 0 10px 0; color: #003D8F; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px;">$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #003D8F;">$1</h1>');
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-  const lines = html.split('\n');
-  let inList = false;
-  let result = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const listItemMatch = line.match(/^\- (.*$)/);
-    if (listItemMatch) {
-      if (!inList) {
-        result.push('<ul style="margin: 8px 0; padding-left: 24px;">');
-        inList = true;
-      }
-      result.push(`<li style="margin: 4px 0;">${listItemMatch[1]}</li>`);
-    } else {
-      if (inList) {
-        result.push('</ul>');
-        inList = false;
-      }
-      result.push(line);
-    }
-  }
-  if (inList) {
-    result.push('</ul>');
-  }
-  html = result.join('\n');
-  html = html.replace(/\n\n/g, '</p><p style="margin: 8px 0;">');
-  html = html.replace(/\n/g, '<br>');
-  if (!html.startsWith('<')) {
-    html = '<p style="margin: 8px 0;">' + html + '</p>';
-  }
-  return html;
-}
+import { INITIAL_EXAMPLES } from "@/lib/examples";
 
 export default function TemplateEditor() {
   const { api } = useAuth();
@@ -387,6 +178,83 @@ export default function TemplateEditor() {
     setActiveTab("edit");
   }
 
+  // Funções de processamento simplificadas (mantidas do código original)
+  function getNestedValue(obj, path) {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined;
+    }, obj);
+  }
+
+  function processEachBlocks(template, data) {
+    const eachRegex = /\{\{#each \$\.([\w.]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+    return template.replace(eachRegex, (match, arrayPath, blockContent) => {
+      const array = getNestedValue(data, arrayPath);
+      if (!Array.isArray(array)) return '';
+      return array.map(item => {
+        let processedBlock = blockContent;
+        if (typeof item === 'string' || typeof item === 'number') {
+          processedBlock = processedBlock.replace(/\{\{\.\}\}/g, String(item));
+        }
+        if (typeof item === 'object' && item !== null) {
+          processedBlock = processedBlock.replace(/\{\{(\w+)\}\}/g, (m, key) => {
+            return item[key] !== undefined ? String(item[key]) : '';
+          });
+        }
+        return processedBlock;
+      }).join('');
+    });
+  }
+
+  function processTemplate(template, cvData) {
+    let result = template;
+    result = processEachBlocks(result, cvData);
+    result = result.replace(/\{\{\$\.([\w.]+)\}\}/g, (match, path) => {
+      const value = getNestedValue(cvData, path);
+      return value !== undefined ? String(value) : '';
+    });
+    return result;
+  }
+
+  function markdownToHtml(markdown) {
+    let html = markdown;
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: 600; margin: 16px 0 8px 0; color: #1a1a1a;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 18px; font-weight: 600; margin: 20px 0 10px 0; color: #003D8F; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px;">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #003D8F;">$1</h1>');
+    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+    const lines = html.split('\n');
+    let inList = false;
+    let result = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const listItemMatch = line.match(/^\- (.*$)/);
+      if (listItemMatch) {
+        if (!inList) {
+          result.push('<ul style="margin: 8px 0; padding-left: 24px;">');
+          inList = true;
+        }
+        result.push(`<li style="margin: 4px 0;">${listItemMatch[1]}</li>`);
+      } else {
+        if (inList) {
+          result.push('</ul>');
+          inList = false;
+        }
+        result.push(line);
+      }
+    }
+    if (inList) {
+      result.push('</ul>');
+    }
+    html = result.join('\n');
+    html = html.replace(/\n\n/g, '</p><p style="margin: 8px 0;">');
+    html = html.replace(/\n/g, '<br>');
+    if (!html.startsWith('<')) {
+      html = '<p style="margin: 8px 0;">' + html + '</p>';
+    }
+    return html;
+  }
+
   const processedPreview = selectedCV && body.trim() ? processTemplate(body, selectedCV) : "";
 
   if (error && !templates.length && !cvs.length) {
@@ -451,15 +319,15 @@ export default function TemplateEditor() {
 
       <div style={{ padding: "24px 32px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
-          {/* Sidebar esquerda - com alturas iguais entre as três secções */}
+          {/* Sidebar esquerda com alturas iguais */}
           <div style={{
             border: "1px solid #E0E0E0",
             borderRadius: 8,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            height: "calc(100vh - 220px)", // ajuste para ocupar a altura disponível
-            maxHeight: "700px" // opcional, para não exceder demasiado
+            height: "calc(100vh - 220px)",
+            maxHeight: "700px"
           }}>
             {/* Meus Templates */}
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
@@ -598,7 +466,7 @@ export default function TemplateEditor() {
             </div>
           </div>
 
-          {/* Área principal com tabs (inalterada) */}
+          {/* Área principal com tabs */}
           <div style={{ border: "1px solid #E0E0E0", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", borderBottom: "1px solid #E0E0E0", background: "#F8F8F8" }}>
               <button

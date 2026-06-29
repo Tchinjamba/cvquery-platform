@@ -203,9 +203,9 @@ Título: "Converter LaTeX", 2013`
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
         {/* Sidebar de exemplos */}
-        <div style={{ 
-          border: "1px solid #bfdbfe", 
-          borderRadius: 12, 
+        <div style={{
+          border: "1px solid #bfdbfe",
+          borderRadius: 12,
           overflow: "hidden",
           height: "fit-content",
           background: "#ffffff"
@@ -249,9 +249,9 @@ Título: "Converter LaTeX", 2013`
 
         {/* Conteúdo do exemplo */}
         <div>
-          <div style={{ 
-            border: "1px solid #bfdbfe", 
-            borderRadius: 12, 
+          <div style={{
+            border: "1px solid #bfdbfe",
+            borderRadius: 12,
             overflow: "hidden",
             marginBottom: 24,
             background: "#ffffff"
@@ -263,10 +263,10 @@ Título: "Converter LaTeX", 2013`
                 Use <code style={{ background: "#dbeafe", padding: "2px 6px", borderRadius: 4 }}>/** ... **/</code> para expressões
               </span>
             </div>
-            <pre style={{ 
-              margin: 0, 
-              padding: 16, 
-              background: "#1e1e1e", 
+            <pre style={{
+              margin: 0,
+              padding: 16,
+              background: "#1e1e1e",
               color: "#d4d4d4",
               fontFamily: "monospace",
               fontSize: 13,
@@ -277,9 +277,9 @@ Título: "Converter LaTeX", 2013`
             </pre>
           </div>
 
-          <div style={{ 
-            border: "1px solid #bfdbfe", 
-            borderRadius: 12, 
+          <div style={{
+            border: "1px solid #bfdbfe",
+            borderRadius: 12,
             overflow: "hidden",
             background: "#ffffff"
           }}>
@@ -287,10 +287,10 @@ Título: "Converter LaTeX", 2013`
               <Download size={16} color="#3b82f6" />
               <strong style={{ color: "#1f2937" }}>Output Gerado</strong>
             </div>
-            <pre style={{ 
-              margin: 0, 
-              padding: 16, 
-              background: "#f9fafb", 
+            <pre style={{
+              margin: 0,
+              padding: 16,
+              background: "#f9fafb",
               color: "#1f2937",
               fontFamily: "monospace",
               fontSize: 13,
@@ -301,10 +301,10 @@ Título: "Converter LaTeX", 2013`
             </pre>
           </div>
 
-          <div style={{ 
-            marginTop: 24, 
-            padding: 16, 
-            background: "#eff6ff", 
+          <div style={{
+            marginTop: 24,
+            padding: 16,
+            background: "#eff6ff",
             borderRadius: 8,
             fontSize: 13,
             color: "#4b5563",

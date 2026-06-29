@@ -5,14 +5,14 @@ import Link from "next/link";
 
 // ⭐ Templates de exemplo com a sintaxe OFICIAL da CVQuery 
 const INITIAL_EXAMPLES = [
-  { 
-    name: "Cabeçalho simples", 
+  {
+    name: "Cabeçalho simples",
     body: `Nome: /** $.name **/
 Email: /** $.contact.email **/
-Telefone: /** $.contact.phone **/` 
+Telefone: /** $.contact.phone **/`
   },
-  { 
-    name: "Profissional (oficial)", 
+  {
+    name: "Profissional (oficial)",
     body: `/** $.name **/
 
 /** $.contact.email **/  /** $.contact.phone **/
@@ -37,10 +37,10 @@ Telefone: /** $.contact.phone **/`
   /** ($.skills.$skill) => {
     • $skill\\n
   } **/
-} **/` 
+} **/`
   },
-  { 
-    name: "Académico (oficial)", 
+  {
+    name: "Académico (oficial)",
     body: `/** $.name **/
 
 /** $.contact.email **/  /** $.contact.phone **/
@@ -58,10 +58,10 @@ ORCID: /** $.orcid **/
   /** ($.education.$edu, [[year, DESC]]) => {
     • $edu.degree em $edu.institution ($edu.year)\\n
   } **/
-} **/` 
+} **/`
   },
-  { 
-    name: "Completo (oficial)", 
+  {
+    name: "Completo (oficial)",
     body: `=== /** $.name **/ ===
 Email: /** $.contact.email **/
 Telefone: /** $.contact.phone **/
@@ -119,7 +119,7 @@ Telefone: /** $.contact.phone **/
   /** ($.certifications.$cert) => {
     • $cert.title - $cert.institution ($cert.date)\\n
   } **/
-} **/` 
+} **/`
   }
 ];
 
@@ -132,27 +132,27 @@ function getNestedValue(obj, path) {
 
 function processEachBlocks(template, data) {
   const eachRegex = /\{\{#each \$\.([\w.]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
-  
+
   return template.replace(eachRegex, (match, arrayPath, blockContent) => {
     const array = getNestedValue(data, arrayPath);
-    
+
     if (!Array.isArray(array)) {
       return '';
     }
 
     return array.map(item => {
       let processedBlock = blockContent;
-      
+
       if (typeof item === 'string' || typeof item === 'number') {
         processedBlock = processedBlock.replace(/\{\{\.\}\}/g, String(item));
       }
-      
+
       if (typeof item === 'object' && item !== null) {
         processedBlock = processedBlock.replace(/\{\{(\w+)\}\}/g, (m, key) => {
           return item[key] !== undefined ? String(item[key]) : '';
         });
       }
-      
+
       return processedBlock;
     }).join('');
   });
@@ -160,14 +160,14 @@ function processEachBlocks(template, data) {
 
 function processTemplate(template, cvData) {
   let result = template;
-  
+
   result = processEachBlocks(result, cvData);
-  
+
   result = result.replace(/\{\{\$\.([\w.]+)\}\}/g, (match, path) => {
     const value = getNestedValue(cvData, path);
     return value !== undefined ? String(value) : '';
   });
-  
+
   return result;
 }
 
@@ -338,7 +338,7 @@ export default function TemplateEditor() {
       const filtered = examples.filter(e => e.name !== newExample.name);
       const updated = [...filtered, newExample];
       setExamples(updated);
-      localStorage.setItem("cvquery_examples", JSON.stringify(updated.filter(e => 
+      localStorage.setItem("cvquery_examples", JSON.stringify(updated.filter(e =>
         !INITIAL_EXAMPLES.some(init => init.name === e.name)
       )));
       setExampleSaved(true);
@@ -347,7 +347,7 @@ export default function TemplateEditor() {
     }
     const updated = [...examples, newExample];
     setExamples(updated);
-    const userExamples = updated.filter(e => 
+    const userExamples = updated.filter(e =>
       !INITIAL_EXAMPLES.some(init => init.name === e.name)
     );
     localStorage.setItem("cvquery_examples", JSON.stringify(userExamples));
@@ -359,7 +359,7 @@ export default function TemplateEditor() {
     if (!confirm(`Tem certeza que quer apagar o exemplo "${exampleName}"?`)) return;
     const updated = examples.filter(e => e.name !== exampleName);
     setExamples(updated);
-    const userExamples = updated.filter(e => 
+    const userExamples = updated.filter(e =>
       !INITIAL_EXAMPLES.some(init => init.name === e.name)
     );
     localStorage.setItem("cvquery_examples", JSON.stringify(userExamples));
@@ -402,10 +402,10 @@ export default function TemplateEditor() {
 
   return (
     <>
-      <div className="page-header" style={{ 
-        background: "#003D8F", 
-        borderBottom: "1px solid #1E40AF", 
-        padding: "24px 32px 16px 32px" 
+      <div className="page-header" style={{
+        background: "#003D8F",
+        borderBottom: "1px solid #1E40AF",
+        padding: "24px 32px 16px 32px"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -413,7 +413,7 @@ export default function TemplateEditor() {
             <p className="page-subtitle" style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)" }}>Crie e edite os seus templates para os CVs</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button 
+            <button
               onClick={handleSaveAsExample}
               style={{
                 background: "rgba(255,255,255,0.15)",
@@ -430,8 +430,8 @@ export default function TemplateEditor() {
             >
               ⭐ Guardar como exemplo
             </button>
-            <button 
-              onClick={newTemplate} 
+            <button
+              onClick={newTemplate}
               className="btn btn-primary"
               style={{
                 background: "#FFFFFF",
@@ -452,9 +452,9 @@ export default function TemplateEditor() {
       <div style={{ padding: "24px 32px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
           {/* Sidebar esquerda - com alturas iguais entre as três secções */}
-          <div style={{ 
-            border: "1px solid #E0E0E0", 
-            borderRadius: 8, 
+          <div style={{
+            border: "1px solid #E0E0E0",
+            borderRadius: 8,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -519,9 +519,9 @@ export default function TemplateEditor() {
                       >
                         {e.name}
                         {isUserExample && (
-                          <span style={{ 
-                            fontSize: 9, 
-                            color: "#3b82f6", 
+                          <span style={{
+                            fontSize: 9,
+                            color: "#3b82f6",
                             marginLeft: 6,
                             background: "#dbeafe",
                             padding: "1px 6px",
@@ -715,7 +715,7 @@ Email: /** $.contact.email **/
                   </select>
                 </div>
 
-                <div style={{ 
+                <div style={{
                   flex: 1,
                   overflow: "auto",
                   padding: "24px",
@@ -735,8 +735,8 @@ Email: /** $.contact.email **/
                   ) : (
                     <>
                       {previewFormat === "html" ? (
-                        <div 
-                          style={{ 
+                        <div
+                          style={{
                             fontFamily: "Arial, sans-serif",
                             fontSize: 14,
                             lineHeight: 1.8,
@@ -744,11 +744,11 @@ Email: /** $.contact.email **/
                             maxWidth: "800px",
                             margin: "0 auto"
                           }}
-                          dangerouslySetInnerHTML={{ __html: markdownToHtml(processedPreview) }} 
+                          dangerouslySetInnerHTML={{ __html: markdownToHtml(processedPreview) }}
                         />
                       ) : (
-                        <pre style={{ 
-                          margin: 0, 
+                        <pre style={{
+                          margin: 0,
                           whiteSpace: "pre-wrap",
                           fontFamily: previewFormat === "markdown" ? "monospace" : "Arial, sans-serif",
                           fontSize: 13,

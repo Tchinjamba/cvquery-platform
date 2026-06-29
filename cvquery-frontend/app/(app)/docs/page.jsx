@@ -1,4 +1,5 @@
 "use client";
+// Atualização: formatação de parágrafos e ajustes finos
 import { useState } from "react";
 
 const SECTIONS = [

@@ -337,7 +337,42 @@ const PDFDocument = ({ cvData }) => (
 );
 
 // ============================================================
-// PÁGINA PRINCIPAL (mantida, apenas com as correções no pipeline)
+// PÁGINA PRINCIPAL (componente ExportPage funcional)
 // ============================================================
-// ... (o resto do componente ExportPage permanece igual ao que já tem,
-//      pois as correções estão nas classes acima)git 
+
+export default function ExportPage() {
+  const { api, ready } = useAuth();
+  const [cvs, setCvs] = useState([]);
+
+  useEffect(() => {
+    if (!ready) return;
+    api('/cvs')
+      .then((res) => {
+        if (!res.ok) throw new Error('Falha ao obter CVs');
+        return res.json();
+      })
+      .then((data) => setCvs(Array.isArray(data) ? data : []))
+      .catch(() => setCvs([]));
+  }, [api, ready]);
+
+  return (
+    <div style={{ padding: 12 }}>
+      <h1>Exportar CV</h1>
+      {cvs.length === 0 ? (
+        <p>Nenhum CV encontrado.</p>
+      ) : (
+        cvs.map((cv) => (
+          <div key={cv._id || cv.id} style={{ marginBottom: 18 }}>
+            <h2 style={{ margin: '6px 0' }}>{cv.name || cv.title || 'CV'}</h2>
+            <PDFDownloadLink
+              document={<PDFDocument cvData={applyTemplateRules(cv, null)} />}
+              fileName={`${(cv.name || 'cv').replace(/\s+/g, '_')}.pdf`}
+            >
+              {({ loading }) => (loading ? 'A gerar...' : 'Descarregar PDF')}
+            </PDFDownloadLink>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}

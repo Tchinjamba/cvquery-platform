@@ -58,7 +58,6 @@ class CVQueryBinder {
       }
 else if (node.type === 'placeholder') {
   const value = this.getValue(node.path);
-  // 🔥 Se for objeto (não array) → retorna vazio para evitar [object Object]
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
     this.output.push('');
   } else {

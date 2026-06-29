@@ -56,11 +56,16 @@ class CVQueryBinder {
         this.output.push(node.content);
         i++;
       }
-      else if (node.type === 'placeholder') {
-        const value = this.getValue(node.path);
-        this.output.push(value !== undefined ? String(value) : '');
-        i++;
-      }
+else if (node.type === 'placeholder') {
+  const value = this.getValue(node.path);
+  // 🔥 Se for objeto (não array) → retorna vazio para evitar [object Object]
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    this.output.push('');
+  } else {
+    this.output.push(value !== undefined ? String(value) : '');
+  }
+  i++;
+}
       else if (node.type === 'loop_open') {
         const arrayData = this.getValue(node.array);
         if (Array.isArray(arrayData) && arrayData.length > 0) {
@@ -186,13 +191,14 @@ class CVQueryRenderer {
     if (inList) {
       html += `</ul>\n`;
     }
-    return `<!DOCTYPE html>
+return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>Curriculum Vitae</title>
   <style>
     body { font-family: 'Times New Roman', serif; max-width: 210mm; margin: 10mm auto; padding: 10mm; line-height: 1.4; font-size: 11px; }
+    .logo { text-align: center; font-size: 22px; font-weight: bold; color: #003D8F; letter-spacing: 4px; margin-bottom: 12px; border-bottom: 2px solid #003D8F; padding-bottom: 6px; }
     h1 { font-size: 18px; border-bottom: 2px solid #003D8F; padding-bottom: 4px; }
     h2 { font-size: 14px; color: #003D8F; border-left: 3px solid #003D8F; padding-left: 8px; margin-top: 12px; }
     h3 { font-size: 12px; margin: 8px 0 4px 0; }
@@ -207,7 +213,8 @@ class CVQueryRenderer {
   </style>
 </head>
 <body>
-${html}
+  <div class="logo">CVQuery</div>
+  ${html}
 </body>
 </html>`;
   }

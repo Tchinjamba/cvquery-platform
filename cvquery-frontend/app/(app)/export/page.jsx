@@ -4,301 +4,6 @@ import { useAuth } from "@/context/AuthContext";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 // ============================================================
-// 🧠 MÓDULO CVQuery - (mantido igual ao seu)
-// ============================================================
-class CVQueryParser {
-  constructor(template) {
-    this.template = template;
-    this.ast = [];
-  }
-  parse() {
-    const lines = this.template.split('\n');
-    this.ast = lines.map(line => this.parseLine(line));
-    return this.ast;
-  }
-  parseLine(line) {
-    let placeholderMatch = line.match(/\$\$\.(\w+(\.\w+)*)/);
-    if (!placeholderMatch) placeholderMatch = line.match(/\$\.(\w+(\.\w+)*)/);
-    if (placeholderMatch) {
-      return { type: 'placeholder', path: placeholderMatch[1], raw: placeholderMatch[0] };
-    }
-    let loopMatch = line.match(/{{#each \$\$\.(\w+)}}/);
-    if (!loopMatch) loopMatch = line.match(/{{#each \$\.(\w+)}}/);
-    if (loopMatch) {
-      return { type: 'loop_open', array: loopMatch[1] };
-    }
-    if (line.trim() === '{{/each}}') {
-      return { type: 'loop_close' };
-    }
-    let ifMatch = line.match(/{{#if \$\$\.(\w+)}}/);
-    if (!ifMatch) ifMatch = line.match(/{{#if \$\.(\w+)}}/);
-    if (ifMatch) {
-      return { type: 'if', condition: ifMatch[1] };
-    }
-    if (line.trim() === '{{/if}}') {
-      return { type: 'if_close' };
-    }
-    return { type: 'text', content: line };
-  }
-}
-
-class CVQueryBinder {
-  constructor(ast, data) {
-    this.ast = ast;
-    this.data = data;
-    this.output = [];
-  }
-  bind() {
-    let i = 0;
-    while (i < this.ast.length) {
-      const node = this.ast[i];
-      if (node.type === 'text') {
-        this.output.push(node.content);
-        i++;
-      }
-else if (node.type === 'placeholder') {
-  const value = this.getValue(node.path);
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    this.output.push('');
-  } else {
-    this.output.push(value !== undefined ? String(value) : '');
-  }
-  i++;
-}
-      else if (node.type === 'loop_open') {
-        const arrayData = this.getValue(node.array);
-        if (Array.isArray(arrayData) && arrayData.length > 0) {
-          const loopEnd = this.findLoopEnd(i);
-          const loopBody = this.ast.slice(i + 1, loopEnd);
-          arrayData.forEach(item => {
-            const binder = new CVQueryBinder(loopBody, { ...this.data, _item: item });
-            const result = binder.bind();
-            this.output.push(result.join(''));
-          });
-          i = loopEnd + 1;
-        } else {
-          i = this.findLoopEnd(i) + 1;
-        }
-      }
-      else if (node.type === 'if') {
-        const conditionValue = this.getValue(node.condition);
-        const ifEnd = this.findIfEnd(i);
-        const ifBody = this.ast.slice(i + 1, ifEnd);
-        if (conditionValue) {
-          const binder = new CVQueryBinder(ifBody, this.data);
-          const result = binder.bind();
-          this.output.push(result.join(''));
-        }
-        i = ifEnd + 1;
-      }
-      else {
-        i++;
-      }
-    }
-    return this.output;
-  }
-  getValue(path) {
-    const parts = path.split('.');
-    let current = this.data;
-    if (parts[0] === '_item') {
-      parts.shift();
-      current = this.data._item || {};
-    }
-    for (const part of parts) {
-      if (current && current[part] !== undefined) {
-        current = current[part];
-      } else {
-        return undefined;
-      }
-    }
-    return current;
-  }
-  findLoopEnd(start) {
-    let depth = 1;
-    let i = start + 1;
-    while (i < this.ast.length && depth > 0) {
-      if (this.ast[i].type === 'loop_open') depth++;
-      if (this.ast[i].type === 'loop_close') depth--;
-      i++;
-    }
-    return i - 1;
-  }
-  findIfEnd(start) {
-    let depth = 1;
-    let i = start + 1;
-    while (i < this.ast.length && depth > 0) {
-      if (this.ast[i].type === 'if') depth++;
-      if (this.ast[i].type === 'if_close') depth--;
-      i++;
-    }
-    return i - 1;
-  }
-}
-
-class CVQueryRenderer {
-  constructor(boundContent, format = 'text') {
-    this.content = boundContent;
-    this.format = format;
-  }
-  render() {
-    const text = this.content.join('\n');
-    switch (this.format) {
-      case 'html':
-        return this.renderHTML(text);
-      case 'markdown':
-        return this.renderMarkdown(text);
-      case 'text':
-      default:
-        return text;
-    }
-  }
-  renderHTML(text) {
-    const lines = text.split('\n');
-    let html = '';
-    let inList = false;
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('# ')) {
-        html += `<h1>${trimmed.substring(2)}</h1>\n`;
-      } else if (trimmed.startsWith('## ')) {
-        html += `<h2>${trimmed.substring(3)}</h2>\n`;
-      } else if (trimmed.startsWith('### ')) {
-        html += `<h3>${trimmed.substring(4)}</h3>\n`;
-      } else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-        html += `<p><strong>${trimmed.substring(2, trimmed.length - 2)}</strong></p>\n`;
-      } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-        const item = trimmed.substring(2);
-        if (!inList) {
-          html += `<ul>\n`;
-          inList = true;
-        }
-        html += `<li>${item}</li>\n`;
-      } else if (trimmed === '') {
-        if (inList) {
-          html += `</ul>\n`;
-          inList = false;
-        }
-        html += `<br/>\n`;
-      } else {
-        if (inList) {
-          html += `</ul>\n`;
-          inList = false;
-        }
-        html += `<p>${trimmed}</p>\n`;
-      }
-    }
-    if (inList) {
-      html += `</ul>\n`;
-    }
-return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Curriculum Vitae</title>
-  <style>
-    body { font-family: 'Times New Roman', serif; max-width: 210mm; margin: 10mm auto; padding: 10mm; line-height: 1.4; font-size: 11px; }
-    .logo { text-align: center; font-size: 22px; font-weight: bold; color: #003D8F; letter-spacing: 4px; margin-bottom: 12px; border-bottom: 2px solid #003D8F; padding-bottom: 6px; }
-    h1 { font-size: 18px; border-bottom: 2px solid #003D8F; padding-bottom: 4px; }
-    h2 { font-size: 14px; color: #003D8F; border-left: 3px solid #003D8F; padding-left: 8px; margin-top: 12px; }
-    h3 { font-size: 12px; margin: 8px 0 4px 0; }
-    ul { margin: 4px 0; padding-left: 20px; }
-    li { margin: 2px 0; }
-    p { margin: 4px 0; }
-    .personal-info { background: #f5f5f5; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; }
-    .personal-info p { margin: 2px 0; font-size: 10px; }
-    .personal-info strong { display: inline-block; width: 70px; }
-    .period { color: #888; font-size: 9px; }
-    @media print { body { margin: 0; padding: 10mm; } }
-  </style>
-</head>
-<body>
-  <div class="logo">CVQuery</div>
-  ${html}
-</body>
-</html>`;
-  }
-  renderMarkdown(text) {
-    return text;
-  }
-}
-
-class CVQueryPipeline {
-  constructor(template, data, format = 'text') {
-    this.template = template;
-    this.data = data;
-    this.format = format;
-  }
-  process() {
-    const parser = new CVQueryParser(this.template);
-    const ast = parser.parse();
-    const binder = new CVQueryBinder(ast, this.data);
-    const boundContent = binder.bind();
-    const renderer = new CVQueryRenderer(boundContent, this.format);
-    return renderer.render();
-  }
-}
-
-// ============================================================
-// 🆕 FUNÇÃO PARA APLICAR REGRAS DO TEMPLATE (FILTRAGEM E TRADUÇÃO)
-// ============================================================
-function applyTemplateRules(originalData, template) {
-  if (!template) return originalData;
-  // Clona para não modificar o estado original
-  const data = JSON.parse(JSON.stringify(originalData));
-
-  // 1. Filtrar secções com base no templateType (se existir campo 'sections')
-  if (template.templateType && template.templateType !== 'all' && data.sections) {
-    data.sections = data.sections.filter(
-      section => section.category === template.templateType
-    );
-  }
-
-  // 2. Traduzir para inglês se o template tiver language = 'en'
-  if (template.language === 'en') {
-    return translateObject(data);
-  }
-
-  return data;
-}
-
-// Dicionário básico de tradução (expanda conforme necessário)
-function translateObject(obj) {
-  const dict = {
-    "Experiência Profissional": "Professional Experience",
-    "Formação Académica": "Education",
-    "Competências": "Skills",
-    "Objetivo": "Objective",
-    "Informações Pessoais": "Personal Information",
-    "Nome": "Name",
-    "Email": "Email",
-    "Telefone": "Phone",
-    "Localização": "Location",
-    "Empresa": "Company",
-    "Cargo": "Position",
-    "Período": "Period",
-    "Descrição": "Description",
-    "Instituição": "Institution",
-    "Curso": "Course",
-    "Estado": "Status"
-  };
-
-  if (typeof obj === 'string') {
-    return dict[obj] || obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(item => translateObject(item));
-  }
-  if (obj && typeof obj === 'object') {
-    const newObj = {};
-    for (const [key, value] of Object.entries(obj)) {
-      newObj[key] = translateObject(value);
-    }
-    return newObj;
-  }
-  return obj;
-}
-
-// ============================================================
 // 📄 COMPONENTE PRINCIPAL
 // ============================================================
 const pdfStyles = StyleSheet.create({
@@ -489,8 +194,7 @@ export default function ExportPage() {
     }
   };
 
-  // 🆕 Processar com dados filtrados/traduzidos
-  const handleProcess = () => {
+  const handleProcess = async () => {
     if (!selectedTemplate) {
       setError("Selecione um template");
       return;
@@ -500,14 +204,17 @@ export default function ExportPage() {
       return;
     }
     try {
-      const processedData = applyTemplateRules(cvData, selectedTemplate);
-      const pipeline = new CVQueryPipeline(
-        selectedTemplate.content,
-        processedData,
-        outputFormat
-      );
-      const result = pipeline.process();
-      setProcessedOutput(result);
+      const res = await api("/api/cv/process", {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: selectedTemplate._id,
+          cvId: selectedCV._id,
+          format: outputFormat
+        })
+      });
+      if (!res.ok) throw new Error("Erro ao processar template");
+      const json = await res.json();
+      setProcessedOutput(json.output);
       setShowOutput(true);
       setError("");
     } catch (err) {
@@ -525,8 +232,7 @@ export default function ExportPage() {
     URL.revokeObjectURL(url);
   };
 
-  // 🆕 Exportar com dados filtrados/traduzidos
-  const exportWithPipeline = (format) => {
+  const exportWithPipeline = async (format) => {
     if (!selectedTemplate) {
       setError("Selecione um template");
       return;
@@ -536,20 +242,19 @@ export default function ExportPage() {
       return;
     }
     try {
-      const processedData = applyTemplateRules(cvData, selectedTemplate);
-      const pipeline = new CVQueryPipeline(
-        selectedTemplate.content,
-        processedData,
-        format
-      );
-      const result = pipeline.process();
+      const res = await api("/api/cv/process", {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: selectedTemplate._id,
+          cvId: selectedCV._id,
+          format
+        })
+      });
+      if (!res.ok) throw new Error("Erro ao exportar");
+      const json = await res.json();
       const ext = format === 'html' ? 'html' : format === 'markdown' ? 'md' : 'txt';
       const mime = format === 'html' ? 'text/html' : format === 'markdown' ? 'text/markdown' : 'text/plain';
-      let finalContent = result;
-      if (format === 'text') {
-        finalContent = `CVQuery\n${"=".repeat(40)}\n\nINFORMAÇÕES PESSOAIS\n-------------------\nNome: ${processedData?.name || "—"}\nEmail: ${processedData?.contact?.email || "—"}\nTelefone: ${processedData?.contact?.phone || "—"}\nLocalização: ${processedData?.contact?.location || "—"}\n${processedData?.course ? `Estado: ${processedData.course}` : ""}\n\n${result}`;
-      }
-      downloadFile(finalContent, `${selectedCV?.name || "cv"}.${ext}`, mime);
+      downloadFile(json.output, `${selectedCV?.name || "cv"}.${ext}`, mime);
       setError("");
     } catch (err) {
       setError("Erro ao exportar: " + err.message);
@@ -692,7 +397,7 @@ export default function ExportPage() {
                 <button onClick={exportJSON} style={buttonStyle("#003D8F")}>🔧 JSON</button>
                 {/* 🆕 PDF com dados processados */}
                 <PDFDownloadLink
-                  document={<PDFDocument cvData={applyTemplateRules(cvData, selectedTemplate)} />}
+                  document={<PDFDocument cvData={cvData} />}
                   fileName={`${selectedCV?.name || "cv"}.pdf`}
                   style={{ textDecoration: "none", gridColumn: "span 2" }}
                 >
@@ -728,7 +433,7 @@ export default function ExportPage() {
           <h4 style={{ color: "#1A1A1A", marginBottom: 4 }}>⚡ CVQuery Pipeline</h4>
           <p><strong>Parse → Bind → Render</strong></p>
           <p style={{ fontSize: 12, marginTop: 4 }}>
-            {`A sintaxe CVQuery suporta placeholders ($$.campo), loops ({{#each $.array}}) e condicionais ({{#if $.campo}}). O pipeline é extensível e desacoplado, permitindo novos formatos de saída.`}
+            {`A sintaxe CVQuery suporta acesso a campos ($.nome), iteração (($.array.$item) => { ... }) e expressões dinâmicas (/-- expr --/). O processamento é feito pelo backend.`}
           </p>
         </div>
       </div>

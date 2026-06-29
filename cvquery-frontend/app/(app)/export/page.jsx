@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 // ============================================================
-// 🧠 MÓDULO CVQuery
+// 🧠 MÓDULO CVQuery - (mantido igual ao seu)
 // ============================================================
 class CVQueryParser {
   constructor(template) {
@@ -237,14 +237,17 @@ class CVQueryPipeline {
 // ============================================================
 function applyTemplateRules(originalData, template) {
   if (!template) return originalData;
+  // Clona para não modificar o estado original
   const data = JSON.parse(JSON.stringify(originalData));
 
+  // 1. Filtrar secções com base no templateType (se existir campo 'sections')
   if (template.templateType && template.templateType !== 'all' && data.sections) {
     data.sections = data.sections.filter(
       section => section.category === template.templateType
     );
   }
 
+  // 2. Traduzir para inglês se o template tiver language = 'en'
   if (template.language === 'en') {
     return translateObject(data);
   }
@@ -252,6 +255,7 @@ function applyTemplateRules(originalData, template) {
   return data;
 }
 
+// Dicionário básico de tradução (expanda conforme necessário)
 function translateObject(obj) {
   const dict = {
     "Experiência Profissional": "Professional Experience",
@@ -289,7 +293,7 @@ function translateObject(obj) {
 }
 
 // ============================================================
-// 📄 COMPONENTE PDF
+// 📄 COMPONENTE PRINCIPAL
 // ============================================================
 const pdfStyles = StyleSheet.create({
   page: {
@@ -388,22 +392,6 @@ const PDFDocument = ({ cvData }) => (
   </Document>
 );
 
-// ============================================================
-// 📄 PÁGINA PRINCIPAL DE EXPORTAÇÃO
-// ============================================================
-const buttonStyle = (bgColor, disabled = false) => ({
-  padding: "10px 14px",
-  background: disabled ? "#ccc" : bgColor,
-  color: "white",
-  border: "none",
-  borderRadius: 6,
-  cursor: disabled ? "not-allowed" : "pointer",
-  fontSize: 13,
-  fontWeight: 500,
-  transition: "all 0.2s",
-  width: "100%",
-});
-
 export default function ExportPage() {
   const { api } = useAuth();
   const [cvs, setCvs] = useState([]);
@@ -495,6 +483,7 @@ export default function ExportPage() {
     }
   };
 
+  // 🆕 Processar com dados filtrados/traduzidos
   const handleProcess = () => {
     if (!selectedTemplate) {
       setError("Selecione um template");
@@ -530,7 +519,7 @@ export default function ExportPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ⭐ Exportação com suporte a Word e LaTeX
+  // 🆕 Exportar com dados filtrados/traduzidos
   const exportWithPipeline = (format) => {
     if (!selectedTemplate) {
       setError("Selecione um template");
@@ -542,50 +531,27 @@ export default function ExportPage() {
     }
     try {
       const processedData = applyTemplateRules(cvData, selectedTemplate);
-      
-      // Para Word e LaTeX usamos formato 'text' (conteúdo simples)
-      const pipelineFormat = (format === 'docx' || format === 'latex') ? 'text' : format;
       const pipeline = new CVQueryPipeline(
         selectedTemplate.content,
         processedData,
-        pipelineFormat
+        format
       );
       const result = pipeline.process();
-      
-      let ext, mime, finalContent = result;
-      
-      switch (format) {
-        case 'html':
-          ext = 'html';
-          mime = 'text/html';
-          break;
-        case 'markdown':
-          ext = 'md';
-          mime = 'text/markdown';
-          break;
-        case 'docx':
-          ext = 'docx';
-          mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-          // Para Word, podemos adicionar um cabeçalho simples
-          finalContent = result;
-          break;
-        case 'latex':
-          ext = 'tex';
-          mime = 'application/x-tex';
-          finalContent = result;
-          break;
-        default: // text
-          ext = 'txt';
-          mime = 'text/plain';
-          finalContent = `CVQuery\n${"=".repeat(40)}\n\nINFORMAÇÕES PESSOAIS\n-------------------\nNome: ${processedData?.name || "—"}\nEmail: ${processedData?.contact?.email || "—"}\nTelefone: ${processedData?.contact?.phone || "—"}\nLocalização: ${processedData?.contact?.location || "—"}\n${processedData?.course ? `Estado: ${processedData.course}` : ""}\n\n${result}`;
-          break;
+      const ext = format === 'html' ? 'html' : format === 'markdown' ? 'md' : 'txt';
+      const mime = format === 'html' ? 'text/html' : format === 'markdown' ? 'text/markdown' : 'text/plain';
+      let finalContent = result;
+      if (format === 'text') {
+        finalContent = `CVQuery\n${"=".repeat(40)}\n\nINFORMAÇÕES PESSOAIS\n-------------------\nNome: ${processedData?.name || "—"}\nEmail: ${processedData?.contact?.email || "—"}\nTelefone: ${processedData?.contact?.phone || "—"}\nLocalização: ${processedData?.contact?.location || "—"}\n${processedData?.course ? `Estado: ${processedData.course}` : ""}\n\n${result}`;
       }
-      
       downloadFile(finalContent, `${selectedCV?.name || "cv"}.${ext}`, mime);
       setError("");
     } catch (err) {
       setError("Erro ao exportar: " + err.message);
     }
+  };
+
+  const exportJSON = () => {
+    downloadFile(JSON.stringify(cvData, null, 2), `${selectedCV?.name || "cv"}.json`, "application/json");
   };
 
   if (loading) {
@@ -613,38 +579,29 @@ export default function ExportPage() {
       <div style={{ padding: "24px 32px", maxWidth: 1400, margin: "0 auto" }}>
         {error && <div style={{ marginBottom: 16, padding: 12, background: "#fee2e2", color: "#dc2626", borderRadius: 8 }}>❌ {error}</div>}
 
-        {/* ⭐ Layout de 3 colunas com alturas fixas */}
-        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 1fr", gap: 24, alignItems: "stretch" }}>
-
-          {/* Coluna 1 - Meus CVs */}
-          <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, overflow: "hidden", height: "calc(100vh - 220px)" }}>
-            <div style={{ padding: "12px 16px", background: "#F5F5F5", borderBottom: "1px solid #E0E0E0", fontWeight: 600, color: "#1A1A1A" }}>
-              Meus CVs
-            </div>
-            <div style={{ height: "calc(100% - 48px)", overflowY: "auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 1fr", gap: 24 }}>
+          {/* Sidebar CVs */}
+          <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "12px 16px", background: "#F5F5F5", borderBottom: "1px solid #E0E0E0", fontWeight: 600, color: "#1A1A1A" }}>Meus CVs</div>
+            <div style={{ maxHeight: "calc(100vh - 250px)", overflowY: "auto" }}>
               {cvs.map(cv => (
                 <button key={cv._id} onClick={() => handleSelectCV(cv)} style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", border: "none", background: selectedCV?._id === cv._id ? "#DBEAFE" : "transparent", cursor: "pointer", borderBottom: "1px solid #F0F0F0" }}>
                   <div style={{ fontWeight: selectedCV?._id === cv._id ? 600 : 400, color: "#1A1A1A" }}>{cv.name}</div>
                   <div style={{ fontSize: 11, color: "#999" }}>{new Date(cv.updatedAt).toLocaleDateString()}</div>
                 </button>
               ))}
-              {cvs.length === 0 && (
-                <div style={{ padding: 16, color: "#999", fontSize: 13 }}>Nenhum CV encontrado</div>
-              )}
             </div>
           </div>
 
-          {/* Coluna 2 - Editor JSON + Template (empilhados) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 220px)" }}>
-            {/* Editor JSON */}
-            <div style={{ flex: 1, border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, overflow: "auto" }}>
+          {/* Editor JSON + Template */}
+          <div>
+            <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>📝 Dados do CV (JSON)</h3>
               <p style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Dados que serão injetados no template</p>
-              <textarea value={jsonText} onChange={handleJsonChange} style={{ width: "100%", height: "calc(100% - 60px)", fontFamily: "monospace", fontSize: 12, padding: 12, border: "1px solid #E0E0E0", borderRadius: 8, resize: "none" }} />
+              <textarea value={jsonText} onChange={handleJsonChange} rows={10} style={{ width: "100%", fontFamily: "monospace", fontSize: 12, padding: 12, border: "1px solid #E0E0E0", borderRadius: 8 }} />
             </div>
 
-            {/* Template + Processamento */}
-            <div style={{ flex: 1, border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, overflow: "auto" }}>
+            <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>📋 Template CVQuery</h3>
               <select
                 value={selectedTemplate?._id || ""}
@@ -660,7 +617,7 @@ export default function ExportPage() {
                 ))}
               </select>
 
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <select
                   value={outputFormat}
                   onChange={(e) => setOutputFormat(e.target.value)}
@@ -679,7 +636,7 @@ export default function ExportPage() {
               </div>
 
               {selectedTemplate && (
-                <div style={{ padding: 12, background: "#F5F5F5", borderRadius: 6, fontSize: 12, marginBottom: 12 }}>
+                <div style={{ padding: 12, background: "#F5F5F5", borderRadius: 6, fontSize: 12, marginTop: 12 }}>
                   <strong>Template:</strong> {selectedTemplate.name}
                   {selectedTemplate.templateType && (
                     <span style={{ marginLeft: 12, background: "#003D8F", color: "#fff", padding: "2px 10px", borderRadius: 12 }}>
@@ -701,7 +658,7 @@ export default function ExportPage() {
                     background: "#F5F5F5",
                     borderRadius: 6,
                     padding: 12,
-                    maxHeight: 200,
+                    maxHeight: 300,
                     overflow: "auto",
                     fontFamily: outputFormat === "html" ? "inherit" : "monospace",
                     fontSize: outputFormat === "html" ? "inherit" : 11,
@@ -718,17 +675,16 @@ export default function ExportPage() {
             </div>
           </div>
 
-          {/* Coluna 3 - Exportar + Resumo */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 220px)" }}>
-            {/* Exportar */}
-            <div style={{ flex: 1, border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, overflow: "auto" }}>
-              <h3 style={{ marginBottom: 16, color: "#1A1A1A" }}>📤 Exportar documento</h3>
+          {/* Botões de Exportação */}
+          <div>
+            <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, marginBottom: 24 }}>
+              <h3 style={{ marginBottom: 16, color: "#1A1A1A" }}>📤 Exportar</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <button onClick={() => exportWithPipeline('html')} style={buttonStyle("#003D8F")}>🌐 HTML</button>
                 <button onClick={() => exportWithPipeline('text')} style={buttonStyle("#4A4A4A")}>📝 Texto</button>
                 <button onClick={() => exportWithPipeline('markdown')} style={buttonStyle("#6B7280")}>📊 Markdown</button>
-                <button onClick={() => exportWithPipeline('docx')} style={buttonStyle("#2B5797")}>📄 Word</button>
-                <button onClick={() => exportWithPipeline('latex')} style={buttonStyle("#008080")}>📐 LaTeX</button>
+                <button onClick={exportJSON} style={buttonStyle("#003D8F")}>🔧 JSON</button>
+                {/* 🆕 PDF com dados processados */}
                 <PDFDownloadLink
                   document={<PDFDocument cvData={applyTemplateRules(cvData, selectedTemplate)} />}
                   fileName={`${selectedCV?.name || "cv"}.pdf`}
@@ -749,7 +705,7 @@ export default function ExportPage() {
             </div>
 
             {/* Resumo do CV */}
-            <div style={{ flex: 1, border: "1px solid #E0E0E0", borderRadius: 12, padding: 20, overflow: "auto" }}>
+            <div style={{ border: "1px solid #E0E0E0", borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginBottom: 12, color: "#1A1A1A" }}>👤 Resumo do CV</h3>
               <div style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A4A" }}>
                 <p><strong>Nome:</strong> {cvData?.name || "—"}</p>
@@ -760,7 +716,6 @@ export default function ExportPage() {
               </div>
             </div>
           </div>
-
         </div>
 
         <div style={{ marginTop: 32, padding: 16, background: "#F5F5F5", borderRadius: 8, fontSize: 13, color: "#666" }}>
@@ -774,3 +729,16 @@ export default function ExportPage() {
     </>
   );
 }
+
+const buttonStyle = (bgColor, disabled = false) => ({
+  padding: "10px 14px",
+  background: disabled ? "#ccc" : bgColor,
+  color: "white",
+  border: "none",
+  borderRadius: 6,
+  cursor: disabled ? "not-allowed" : "pointer",
+  fontSize: 13,
+  fontWeight: 500,
+  transition: "all 0.2s",
+  width: "100%"
+});
